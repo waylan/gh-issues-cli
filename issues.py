@@ -97,17 +97,23 @@ edit_parser.add_argument('-l', '--labels' , nargs='+', help='Labels to associate
 edit_parser.set_defaults(func=edit)
 
 # The "comment" command
-comment_parser = subparsers.add_parser('comment', help='Comment on an existing issue', 
-                                    epilog=message_epilog)
-comment_parser.add_argument('issue', help='Issue ID number')
-#comment_parser.add_argument('-m', '--message', dest='body', 
-#                            help='Comment body (use markdown for formatting)')
-comment_parser.add_argument('-l', '--list', help='List comments')
-comment_parser.add_argument('-s', '--show', help='Display a comment')
-comment_parser.add_argument('-n', '--new', dest='body', help='Create a comment')
-comment_parser.add_argument('-e', '--edit', dest='body', help='Edit a comment')
-comment_parser.add_argument('-d', '--delete', help='Delete a comment')
-comment_parser.set_defaults(func=comment)
+cmnt_psr = subparsers.add_parser('comment', 
+				help='Comment on an existing issue', 
+				epilog=message_epilog)
+cmnt_gp = cmnt_psr.add_mutually_exclusive_group(required=True)
+cmnt_gp.add_argument('-l', '--list',  metavar='ISSUE_ID',
+				 help='List comments for given issue')
+cmnt_gp.add_argument('-s', '--show', metavar='COMMENT_ID',
+				 help='Display a comment')
+cmnt_gp.add_argument('-n', '--new', metavar='ISSUE_ID', 
+				 help='Create a comment')
+cmnt_gp.add_argument('-e', '--edit', metavar='COMMENT_ID', 
+				 help='Edit a comment')
+cmnt_gp.add_argument('-d', '--delete', metavar='COMMENT_ID',
+				 help='Delete a comment')
+cmnt_psr.add_argument('-m', '--message', dest='body', 
+				  help='Comment body (use markdown for formatting)')
+cmnt_psr.set_defaults(func=comment)
 
 if __name__ == '__main__':
     args = parser.parse_args()
