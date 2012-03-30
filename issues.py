@@ -79,40 +79,41 @@ show_parser.set_defaults(func=show)
 
 # The "edit" command
 edt_psr = subparsers.add_parser('edit', 
-		help='Edit an existing issue', 
-		epilog='If no flags are set, the entire issue ' \
-		'will be opened as a document in the editor. ' \
-		'If any flags are set, only the attributes ' \
-		'defined will be updated.')
+                help='Edit an existing issue', 
+                epilog='If no flags are set, the entire issue ' \
+                'will be opened as a document in the editor. ' \
+                'If any flags are set, only the attributes ' \
+                'defined will be updated.')
 edt_psr.add_argument('issue', type=int, help='Issue ID number')
 edt_psr.add_argument('-m', '--message', dest='body',
-				help='Edit Description of issue')
+                     help='Edit Description of issue')
 edt_psr.add_argument('-t', '--title', help='Title of issue')
 edt_psr.add_argument('-a', '--assignee', 
-				help='Login for the user that this issue should be assigned to')
-edt_psr.add_argument('--milestone', type=int, help='Milestone to associate this issue with')
+                     help='Login for the user that this issue should be assigned to')
+edt_psr.add_argument('--milestone', type=int, 
+                     help='Milestone to associate this issue with')
 edt_psr.add_argument('-l', '--labels' , nargs='+', 
-				help='Labels to associate with this issue')
+                     help='Labels to associate with this issue')
 edt_psr.set_defaults(func=edit)
 
 
 # The "comment" command
 cmnt_psr = subparsers.add_parser('comment', 
-				help='Comment on an existing issue', 
-				epilog=message_epilog)
+                 help='Comment on an existing issue', 
+                 epilog=message_epilog)
 cmnt_gp = cmnt_psr.add_mutually_exclusive_group(required=True)
 cmnt_gp.add_argument('-l', '--list',  metavar='ISSUE_ID',
-				 help='List comments for given issue')
+                     help='List comments for given issue')
 cmnt_gp.add_argument('-s', '--show', metavar='COMMENT_ID',
-				 help='Display a comment')
+                     help='Display a comment')
 cmnt_gp.add_argument('-n', '--new', metavar='ISSUE_ID', 
-				 help='Create a comment')
+                     help='Create a comment')
 cmnt_gp.add_argument('-e', '--edit', metavar='COMMENT_ID', 
-				 help='Edit a comment')
+                     help='Edit a comment')
 cmnt_gp.add_argument('-d', '--delete', metavar='COMMENT_ID',
-				 help='Delete a comment')
+                     help='Delete a comment')
 cmnt_psr.add_argument('-m', '--message', dest='body', 
-				  help='Comment body (use markdown for formatting)')
+                      help='Comment body (use markdown for formatting)')
 cmnt_psr.set_defaults(func=comment)
 
 if __name__ == '__main__':
