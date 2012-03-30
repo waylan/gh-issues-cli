@@ -47,35 +47,46 @@ subparsers = parser.add_subparsers(title='Available Subcommands',
         description='Run "%(prog)s {subcommand} -h" for more information on each subcommand below.')
 
 # The "list" command
-list_parser = subparsers.add_parser('list', help='List existing issues')
-list_parser.add_argument('-m', '--milestone', 
-                            help='Filter by Milestone ID, "none" or "*" (default all)')
-list_parser.add_argument('--state', choices=['open', 'closed'], 
-                            help='Filter by State, Default: "open"')
-list_parser.add_argument('-a', '--assignee', help='Filter by Assignee')
-list_parser.add_argument('-@', '--mentioned', help='Filter by @MentionedUser')
-list_parser.add_argument('-l', '--labels', nargs='+', help='Filter by Labels')
-list_parser.add_argument('--sort', choices=['created', 'updated', 'comments'],
-                            help='Sort order, Default: "created"')
-list_parser.add_argument('-d', '--direction', choices=['asc', 'desc'],
-                            help='Sort direction, Default: "desc"')
-list_parser.add_argument('--since' , help='Filter by date (string of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)')
-list_parser.set_defaults(func=list)
+ls_psr = subparsers.add_parser('list', help='List existing issues')
+ls_psr.add_argument('-m', '--milestone', 
+    help='Filter by Milestone ID, "none" or "*" (default all)')
+ls_psr.add_argument('--state', choices=['open', 'closed'], 
+                    help='Filter by State, Default: "open"')
+ls_psr.add_argument('-a', '--assignee', 
+                    help='Filter by Assignee')
+ls_psr.add_argument('-@', '--mentioned', 
+                    help='Filter by @MentionedUser')
+ls_psr.add_argument('-l', '--labels', nargs='+', 
+                    help='Filter by Labels')
+ls_psr.add_argument('--sort', choices=['created', 'updated', 'comments'],
+                    help='Sort order, Default: "created"')
+ls_psr.add_argument('-d', '--direction', choices=['asc', 'desc'],
+                    help='Sort direction, Default: "desc"')
+ls_psr.add_argument('--since' , 
+    help='Filter by date (string of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)')
+ls_psr.set_defaults(func=list)
+
 
 # The "new" command
-create_parser = subparsers.add_parser('new', help='Create a new issue', epilog=message_epilog)
-create_parser.add_argument('title', help='Title of issue')
-create_parser.add_argument('-m', '--message', dest='body', help='Description of issue')
-create_parser.add_argument('-a', '--assignee', 
-                            help='Login for the user that this issue should be assigned to')
-create_parser.add_argument('--milestone', type=int, help='Milestone to associate this issue with')
-create_parser.add_argument('-l', '--labels', nargs='+', help='Labels to associate with this issue')
-create_parser.set_defaults(func=new)
+new_psr = subparsers.add_parser('new', 
+                help='Create a new issue', epilog=message_epilog)
+new_psr.add_argument('title', help='Title of issue')
+new_psr.add_argument('-m', '--message', dest='body', 
+                     help='Description of issue')
+new_psr.add_argument('-a', '--assignee', 
+                    help='User this issue should be assigned to')
+new_psr.add_argument('--milestone', type=int, 
+                     help='Milestone to associate this issue with')
+new_psr.add_argument('-l', '--labels', nargs='+', 
+                     help='Labels to associate with this issue')
+new_psr.set_defaults(func=new)
 
 # The "show" command
-show_parser = subparsers.add_parser('show', help='Display an existing issue')
-show_parser.add_argument('issue', type=int, help='Issue ID number')
-show_parser.set_defaults(func=show)
+show_psr = subparsers.add_parser('show', 
+                help='Display an existing issue')
+show_psr.add_argument('issue', type=int, 
+                      help='Issue ID number')
+show_psr.set_defaults(func=show)
 
 # The "edit" command
 edt_psr = subparsers.add_parser('edit', 
