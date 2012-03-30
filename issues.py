@@ -78,23 +78,23 @@ show_parser.add_argument('issue', type=int, help='Issue ID number')
 show_parser.set_defaults(func=show)
 
 # The "edit" command
-edit_parser = subparsers.add_parser('edit', help='Edit an existing issue', 
-        epilog='If no flags are set, the entire issue will be opened as a document in the editor.'
-               'If the "-m, --message" flag is set, a document containing only the '
-               'Description will be opened in the default editor.'
-               'In either case, any changes saved to the document will be applied. '
-               'If the editor is closed with a blank document, the entire action will be aborted.'
-               'The default editor is determined by the "VISUAL" or "EDITOR" environment variables '
-               '(in that order).')
-edit_parser.add_argument('issue', type=int, help='Issue ID number')
-edit_parser.add_argument('-m', '--message', action='store_const', const=True, default=False,
-                         dest='body', help='Edit Description of issue')
-edit_parser.add_argument('-t', '--title', help='Title of issue')
-edit_parser.add_argument('-a', '--assignee', 
-                            help='Login for the user that this issue should be assigned to')
-edit_parser.add_argument('--milestone', type=int, help='Milestone to associate this issue with')
-edit_parser.add_argument('-l', '--labels' , nargs='+', help='Labels to associate with this issue')
-edit_parser.set_defaults(func=edit)
+edt_psr = subparsers.add_parser('edit', 
+		help='Edit an existing issue', 
+		epilog='If no flags are set, the entire issue ' \
+		'will be opened as a document in the editor. ' \
+		'If any flags are set, only the attributes ' \
+		'defined will be updated.')
+edt_psr.add_argument('issue', type=int, help='Issue ID number')
+edt_psr.add_argument('-m', '--message', dest='body',
+				help='Edit Description of issue')
+edt_psr.add_argument('-t', '--title', help='Title of issue')
+edt_psr.add_argument('-a', '--assignee', 
+				help='Login for the user that this issue should be assigned to')
+edt_psr.add_argument('--milestone', type=int, help='Milestone to associate this issue with')
+edt_psr.add_argument('-l', '--labels' , nargs='+', 
+				help='Labels to associate with this issue')
+edt_psr.set_defaults(func=edit)
+
 
 # The "comment" command
 cmnt_psr = subparsers.add_parser('comment', 
