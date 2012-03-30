@@ -1,35 +1,67 @@
 import argparse
 
 ##################################################
-# Utilitiy Functions
+# Utility Functions
 ##################################################
 
-def get_message(args):
+def get_message():
+    """ Get message from EDITOR. """
     return 'some message'
+
+def clean_args(args, exclude_keys=[], exclude_values=[]):
+    """ Remove unwanted keys and/or values from args. """
+    d = {}
+    for k, v in args._get_kwargs():
+        if  k not in exclude_keys and v not in exclude_values:
+            d[k] = v
+    return d
 
 ##################################################
 # Command Actions
 ##################################################
 
 def list(args):
+    """ Run list command """
+    args = clean_args(args, exclude_keys['func'])
     print "Listing issues with filters:", args
 
 def new(args):
+    """ Run new command """
+    args = clean_args(args, exclude_keys=['func'])
+    if args['body'] is None:
+        args['body'] = get_message()
     print "New issue:", args
 
 def show(args):
-    print "Show Issue:", args
+    """ Run show command """
+    print "Show Issue %s" % args.issue
 
 def edit(args):
-    if args.message:
-        print 'Edit message in editor. Args:', args
-    elif not args.title:
-        print 'Edit issue in editor. Args:', args
+    """ Run the edit command. """
+    issue = args.issue
+    args = clean_args(args, 
+                      exclude_keys=['func', 'issue'],
+                      exclude_values = [None])
+    if not args:
+        print 'Edit issue %s in editor. Args:' % issue, args
     else:
-        print 'No editor. Args:', args
+        print 'Edit issue %s with Args:' % issue, args
 
 def comment(args):
-    print "Comment:", args
+    if args.list:
+        print "List comments for issue:", args.list
+    elif args.show:
+        print "Show comment #", args.show
+    elif args.new:
+        if args.body is None:
+            args.body = get_message()
+        print "Create comment on issue %s:" %args.new, args.body
+    elif args.edit:
+        if args.body is None:
+            args.body = get_message()
+        print "Edit comment #%s to:" %args.edit, args.body
+    elif args.delete:
+        print "Delete comment#", args.delete
 
 ##################################################
 # Command Line Parser
@@ -130,6 +162,4 @@ cmnt_psr.set_defaults(func=comment)
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    if hasattr(args, 'body') and args.body is None:
-        args.body = get_message(args)
     args.func(args)
