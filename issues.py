@@ -1,12 +1,68 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
 import argparse
+import os
+import sys
+import re
+from tempfile import mkstemp
+from subprocess import call
 
 ##################################################
 # Utility Functions
 ##################################################
 
-def get_message():
+def run_editor(txt):
+    """ Edit the given text in the system default text editor. """        
+    
+    fd, tmpfile = mkstemp()
+    os.write(fd, txt or "")
+    os.close(fd)
+
+    editor = "vi"
+    if os.environ.has_key("VISUAL"):
+        editor = os.getenv("VISUAL")
+    elif os.environ.has_key("EDITOR"):
+        editor = os.getenv("EDITOR")
+    
+    try:
+        retcode = call("%s %s" % (editor, tmpfile), shell=True)
+    except OSError, e:
+        print("Execution failed:", e, file=sys.stderr)
+        os.unlink(tmpfile)
+
+    contents = open(tmpfile).read()
+    os.unlink(tmpfile)
+    return contents
+
+ARG_RE = re.compile(r'# ([A-Z]+): (.*)')
+
+def get_message(args, template, context=None):
     """ Get message from EDITOR. """
-    return 'some message'
+    if context is None:
+        context = {}
+    for k, v in args.items():
+        if v is None:
+            v = ''
+        elif k == 'labels':
+            v = ' '.join(v)
+        context[k] = v
+    message = run_editor(template % context)
+    body = []
+    end_of_body = False
+    for line in message.split('\n'):
+        if not line.startswith('#') and not end_of_body:
+            body.append(line)
+        else:
+            end_of_body = True
+            m = ARG_RE.match(line)
+            if m:
+                key = m.group(1).lower()
+                value = m.group(2)
+                if key == 'labels':
+                    value = value.split()
+                args[key] = value
+    args['body'] = '\n'.join(body)
 
 def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
@@ -17,24 +73,43 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
     return d
 
 ##################################################
+# Message Templates
+##################################################
+
+issue_tmp ="""%(body)s
+# Please enter/edit a description for your issue above. You may use 
+# Markdown to format your text. Lines starting with a '#' will be 
+# ignored. A blank description will abort the action. To edit other 
+# attributes of an issue, edit the text after each colon below:
+TITLE: %(title)s
+MILESTONE: %(milestone)s
+LABELS: %(labels)s"""
+
+comment_tmp ="""%(body)s
+# Please enter a comment for issue %(issue)s above. You may use 
+# Markdown to format your text. Lines starting with a '#' will be 
+# ignored. A blank description will abort creation of the comment."""
+
+
+##################################################
 # Command Actions
 ##################################################
 
 def list(args):
     """ Run list command """
     args = clean_args(args, exclude_keys['func'])
-    print "Listing issues with filters:", args
+    print("Listing issues with filters:", args)
 
 def new(args):
     """ Run new command """
     args = clean_args(args, exclude_keys=['func'])
     if args['body'] is None:
-        args['body'] = get_message()
-    print "New issue:", args
+        get_message(args, issue_tmp)
+    print("New issue:", args)
 
 def show(args):
     """ Run show command """
-    print "Show Issue %s" % args.issue
+    print("Show Issue %s" % args.issue)
 
 def edit(args):
     """ Run the edit command. """
@@ -43,25 +118,25 @@ def edit(args):
                       exclude_keys=['func', 'issue'],
                       exclude_values = [None])
     if not args:
-        print 'Edit issue %s in editor. Args:' % issue, args
+        print('Edit issue %s in editor. Args:' % issue, args)
     else:
-        print 'Edit issue %s with Args:' % issue, args
+        print('Edit issue %s with Args:' % issue, args)
 
 def comment(args):
     if args.list:
-        print "List comments for issue:", args.list
+        print("List comments for issue:", args.list)
     elif args.show:
-        print "Show comment #", args.show
+        print("Show comment #", args.show)
     elif args.new:
         if args.body is None:
-            args.body = get_message()
-        print "Create comment on issue %s:" %args.new, args.body
+            get_message(args, comment_tmp, {'issue': args.new})
+        print("Create comment on issue %s:" %args.new, args.body)
     elif args.edit:
         if args.body is None:
             args.body = get_message()
-        print "Edit comment #%s to:" %args.edit, args.body
+        print("Edit comment #%s to:" %args.edit, args.body)
     elif args.delete:
-        print "Delete comment#", args.delete
+        print("Delete comment#", args.delete)
 
 ##################################################
 # Command Line Parser
