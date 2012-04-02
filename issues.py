@@ -8,6 +8,23 @@ import re
 from tempfile import mkstemp
 from subprocess import call
 
+try:
+    if call('git rev-parse --is-inside-working-tree, shell=True) == 'true' or \ 
+       call('git rev-parse --is-inside-git-dir, shall=True) == 'true':
+        GIT_EDITOR = call('git var GIT_EDITOR', shell=True)
+        GIT_PAGER = call('git var GIT_PAGER', shell=True)
+        GIT_DIR = call('git rev-parse --git-dir', shall=True)
+        GIT_USER_NAME = call('git config user.name', shell=True)
+        GIT_USER_EMAIL = call('git config user.email', shell=True)
+        GIT_REMOTE = call('git config branch.master.remote', shell=True) # Assume "master"
+        GIT_REMOTE_URL = call('git config remote.%s.url' % GIT_REMOTE, shell=True)
+    else:
+        print('fatal: Not a git repository (or any of the parent directories)', 
+              file=sys.stderr)
+        sys.exit(1)
+except OSError, e:
+    print("Git not configured properly:", e, file=sys.stderr)
+
 ##################################################
 # Utility Functions
 ##################################################
@@ -18,15 +35,9 @@ def run_editor(txt):
     fd, tmpfile = mkstemp()
     os.write(fd, txt or "")
     os.close(fd)
-
-    editor = "vi"
-    if os.environ.has_key("VISUAL"):
-        editor = os.getenv("VISUAL")
-    elif os.environ.has_key("EDITOR"):
-        editor = os.getenv("EDITOR")
     
     try:
-        retcode = call("%s %s" % (editor, tmpfile), shell=True)
+        retcode = call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
     except OSError, e:
         print("Execution failed:", e, file=sys.stderr)
         os.unlink(tmpfile)
