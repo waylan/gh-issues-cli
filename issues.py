@@ -9,8 +9,8 @@ from tempfile import mkstemp
 from subprocess import call
 
 try:
-    if call('git rev-parse --is-inside-working-tree, shell=True) == 'true' or \ 
-       call('git rev-parse --is-inside-git-dir, shall=True) == 'true':
+    if call('git rev-parse --is-inside-working-tree', shell=True) == 'true' or \ 
+       call('git rev-parse --is-inside-git-dir', shall=True) == 'true':
         GIT_EDITOR = call('git var GIT_EDITOR', shell=True)
         GIT_PAGER = call('git var GIT_PAGER', shell=True)
         GIT_DIR = call('git rev-parse --git-dir', shall=True)
