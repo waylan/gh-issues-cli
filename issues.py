@@ -154,11 +154,9 @@ def comment(args):
 ##################################################
 
 message_epilog = 'If the BODY is not provided, a blank document ' \
-                 'will be opened in the default editor for a message ' \
-                 ' to be provided. If the editor is closed with a blank ' \
-                 'document, the action will be aborted. The default editor ' \
-                 'is determined by the "VISUAL" or "EDITOR" environment ' \
-                 'variables (in that order).'
+                 'will be opened in GIT_EDITOR for a message ' \
+                 'to be provided. If the editor is closed with ' \
+                 'a blank document, the action will be aborted.'
 
 # The "issue" command
 parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
