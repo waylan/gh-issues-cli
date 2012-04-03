@@ -6,7 +6,7 @@ import os
 import sys
 import re
 from tempfile import mkstemp
-from subprocess import call, check_output, CalledProcessError
+from subprocess import check_call, check_output, CalledProcessError
 
 try:
     if check_output('git rev-parse --is-inside-working-tree', shell=True) == 'true' or \ 
@@ -37,9 +37,9 @@ def run_editor(txt):
     os.close(fd)
     
     try:
-        retcode = call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
-    except OSError, e:
-        print("Execution failed:", e, file=sys.stderr)
+        check_call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
+    except CalledProcessError, e:
+        print("Action aborted:", e, file=sys.stderr)
         os.unlink(tmpfile)
 
     contents = open(tmpfile).read()
