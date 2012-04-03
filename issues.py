@@ -41,6 +41,7 @@ def run_editor(txt):
     except CalledProcessError, e:
         print("Action aborted:", e, file=sys.stderr)
         os.unlink(tmpfile)
+        sys.exit(1)
 
     contents = open(tmpfile).read()
     os.unlink(tmpfile)
@@ -73,7 +74,10 @@ def get_message(args, template, context=None):
                 if key == 'labels':
                     value = value.split()
                 args[key] = value
-    args['body'] = '\n'.join(body)
+    args['body'] = '\n'.join(body).strip()
+    if not args['body']:
+        print("Action aborted! Message is empty.", file=sys.stderr)
+        sys.exit(1)
 
 def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
