@@ -19,11 +19,9 @@ try:
         GIT_REMOTE = check_output('git config branch.master.remote', shell=True) # Assume "master"
         GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, shell=True)
     else:
-        print('fatal: Not a git repository (or any of the parent directories)', 
-              file=sys.stderr)
-        sys.exit(1)
+        sys.exit('fatal: Not a git repository (or any of the parent directories)')
 except CalledProcessError, e:
-    print("Git not configured properly:", e, file=sys.stderr)
+    sys.exit("Git not configured properly: %s" % e)
 
 ##################################################
 # Utility Functions
@@ -39,9 +37,8 @@ def run_editor(txt):
     try:
         check_call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
     except CalledProcessError, e:
-        print("Action aborted:", e, file=sys.stderr)
         os.unlink(tmpfile)
-        sys.exit(1)
+        sys.exit("Action aborted: %s" % e)
 
     contents = open(tmpfile).read()
     os.unlink(tmpfile)
@@ -76,8 +73,7 @@ def get_message(args, template, context=None):
                 args[key] = value
     args['body'] = '\n'.join(body).strip()
     if not args['body']:
-        print("Action aborted! Message is empty.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit("Action aborted! Message is empty.")
 
 def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
