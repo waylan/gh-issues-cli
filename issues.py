@@ -20,7 +20,7 @@ try:
         GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, shell=True)
     else:
         sys.exit('fatal: Not a git repository (or any of the parent directories)')
-except CalledProcessError, e:
+except CalledProcessError as e:
     sys.exit("Git not configured properly: %s" % e)
 
 ##################################################
@@ -36,7 +36,7 @@ def run_editor(txt):
     
     try:
         check_call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
-    except CalledProcessError, e:
+    except CalledProcessError as e:
         os.unlink(tmpfile)
         sys.exit("Action aborted: %s" % e)
 
