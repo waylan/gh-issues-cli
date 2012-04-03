@@ -6,23 +6,23 @@ import os
 import sys
 import re
 from tempfile import mkstemp
-from subprocess import call
+from subprocess import call, check_output, CalledProcessError
 
 try:
-    if call('git rev-parse --is-inside-working-tree', shell=True) == 'true' or \ 
-       call('git rev-parse --is-inside-git-dir', shall=True) == 'true':
-        GIT_EDITOR = call('git var GIT_EDITOR', shell=True)
-        GIT_PAGER = call('git var GIT_PAGER', shell=True)
-        GIT_DIR = call('git rev-parse --git-dir', shall=True)
-        GIT_USER_NAME = call('git config user.name', shell=True)
-        GIT_USER_EMAIL = call('git config user.email', shell=True)
-        GIT_REMOTE = call('git config branch.master.remote', shell=True) # Assume "master"
-        GIT_REMOTE_URL = call('git config remote.%s.url' % GIT_REMOTE, shell=True)
+    if check_output('git rev-parse --is-inside-working-tree', shell=True) == 'true' or \ 
+       check_output('git rev-parse --is-inside-git-dir', shall=True) == 'true':
+        GIT_EDITOR = check_output('git var GIT_EDITOR', shell=True)
+        GIT_PAGER = check_output('git var GIT_PAGER', shell=True)
+        GIT_DIR = check_output('git rev-parse --git-dir', shall=True)
+        GIT_USER_NAME = check_output('git config user.name', shell=True)
+        GIT_USER_EMAIL = check_output('git config user.email', shell=True)
+        GIT_REMOTE = check_output('git config branch.master.remote', shell=True) # Assume "master"
+        GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, shell=True)
     else:
         print('fatal: Not a git repository (or any of the parent directories)', 
               file=sys.stderr)
         sys.exit(1)
-except OSError, e:
+except CalledProcessError, e:
     print("Git not configured properly:", e, file=sys.stderr)
 
 ##################################################
