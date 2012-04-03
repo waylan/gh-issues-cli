@@ -47,7 +47,7 @@ def run_editor(txt):
     os.unlink(tmpfile)
     return contents
 
-ARG_RE = re.compile(r'# ([A-Z]+): (.*)')
+ARG_RE = re.compile(r'^([A-Z]+): (.*)')
 
 def get_message(args, template, context=None):
     """ Get message from EDITOR. """
