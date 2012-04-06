@@ -6,22 +6,48 @@ import os
 import sys
 import re
 from tempfile import mkstemp
+from urlparse import urlparse
 from subprocess import check_call, check_output, CalledProcessError
 
+################################################
+# Global Vars
+################################################
+
+# Set git variables
 try:
-    if check_output('git rev-parse --is-inside-working-tree', shell=True) == 'true' or \ 
-       check_output('git rev-parse --is-inside-git-dir', shall=True) == 'true':
-        GIT_EDITOR = check_output('git var GIT_EDITOR', shell=True)
-        GIT_PAGER = check_output('git var GIT_PAGER', shell=True)
-        GIT_DIR = check_output('git rev-parse --git-dir', shall=True)
-        GIT_USER_NAME = check_output('git config user.name', shell=True)
-        GIT_USER_EMAIL = check_output('git config user.email', shell=True)
-        GIT_REMOTE = check_output('git config branch.master.remote', shell=True) # Assume "master"
-        GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, shell=True)
-    else:
-        sys.exit('fatal: Not a git repository (or any of the parent directories)')
+    GIT_EDITOR = check_output('git var GIT_EDITOR', shell=True).strip()
+    GIT_PAGER = check_output('git var GIT_PAGER', shell=True).strip()
 except CalledProcessError as e:
-    sys.exit("Git not configured properly: %s" % e)
+    sys.exit('Git not configured properly: %s' % e)
+
+try:
+    GIT_REMOTE = check_output('git config branch.master.remote', 
+                              shell=True).strip() # Assume "master"
+    GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, 
+                                  shell=True).strip()
+except CalledProcessError as e:
+    sys.exit('Not a git repository or no "master" branch: %s' % e)
+
+
+# set Github variables
+GH_USER = None
+if GIT_REMOTE_URL.startswith('git@github.com/'):
+    GH_PROJECT = GIT_REMOTE_URL[16:].rstrip('.git')
+
+elif GIT_REMOTE_URL.startswith('git@gist.github.com:') or \
+     GIT_REMOTE_URL.startswith('git://gist.github.com/'):
+    sys.exit('This appears to be a Gist. Gists do not support Github issues.')
+else:
+    url = urlparse(GIT_REMOTE_URL)
+    if url.scheme == 'git' or (url.scheme == 'https' and url.username is None):
+        sys.exit('Sorry, you do not appear have write acess to the ' \
+                 'Repository at "%s".' % GIT_REMOTE_URL)
+    elif url.scheme == 'https' and url.hostname == 'github.com':
+        GH_USER = url.username
+        GH_PROJECT = url.path.rstrip('.git')
+    else:
+        sys.exit('This Repo does not appear to be hosted at a known Github url.')
+
 
 ##################################################
 # Utility Functions
@@ -160,6 +186,7 @@ message_epilog = 'If the BODY is not provided, a blank document ' \
 
 # The "issue" command
 parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
+parser.add_argument('-u', '--username', help='Github username', default=GH_USER)
 subparsers = parser.add_subparsers(title='Available Subcommands',
         description='Run "%(prog)s {subcommand} -h" for more information on each subcommand below.')
 
