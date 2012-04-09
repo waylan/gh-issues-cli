@@ -158,7 +158,8 @@ comment_tmp ="""%(body)s
 def list(args):
     """ Run list command """
     repo = get_repo(args.user)
-    args = clean_args(args, exclude_keys=['func', 'user'], 
+    args = clean_args(args, 
+                      exclude_keys=['func', 'user'], 
                       exclude_values=[None])
     print("Listing issues with filters:", args)
     if repo.has_issues:
