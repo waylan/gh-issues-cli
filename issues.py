@@ -5,6 +5,9 @@ import argparse
 import os
 import sys
 import re
+import getpass
+from github import Github
+from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
 from urlparse import urlparse
 from subprocess import check_call, check_output, CalledProcessError
@@ -30,7 +33,7 @@ except CalledProcessError as e:
 
 
 # set Github variables
-GH_USER = None
+GH_USER = getpass.getuser()
 if GIT_REMOTE_URL.startswith('git@github.com/'):
     GH_PROJECT = GIT_REMOTE_URL[16:].rstrip('.git')
 
@@ -44,7 +47,7 @@ else:
                  'Repository at "%s".' % GIT_REMOTE_URL)
     elif url.scheme == 'https' and url.hostname == 'github.com':
         GH_USER = url.username
-        GH_PROJECT = url.path.rstrip('.git')
+        GH_PROJECT = url.path.rstrip('.git').lstrip('/')
     else:
         sys.exit('This Repo does not appear to be hosted at a known Github url.')
 
@@ -109,6 +112,26 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
             d[k] = v
     return d
 
+def get_repo(auth):
+    """ Return a Repo instance. """
+    if ':' in auth:
+        user, password = auth.split(':')
+    else:
+        # Prompt for password
+        user = auth
+        password = getpass.getpass()
+    try:
+        g = Github(user, password)
+    except UnknownGithubObject:
+        sys.exit('Bad username:password provided for github.')
+    ruser, rname = GH_PROJECT.split('/')
+    try:
+        ghu = g.get_user(ruser)
+        return ghu.get_repo(rname)
+    except UnknownGithubObject:
+        sys.exit('No such Repo: %s' % GH_PROJECT)
+
+
 ##################################################
 # Message Templates
 ##################################################
@@ -134,8 +157,15 @@ comment_tmp ="""%(body)s
 
 def list(args):
     """ Run list command """
-    args = clean_args(args, exclude_keys['func'])
+    repo = get_repo(args.user)
+    args = clean_args(args, exclude_keys=['func', 'user'], 
+                      exclude_values=[None])
     print("Listing issues with filters:", args)
+    if repo.has_issues:
+        for issue in repo.get_issues(**args):
+            print(issue.number, issue.title)
+    else:
+        print('This repo has no issues.')
 
 def new(args):
     """ Run new command """
@@ -186,7 +216,9 @@ message_epilog = 'If the BODY is not provided, a blank document ' \
 
 # The "issue" command
 parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
-parser.add_argument('-u', '--username', help='Github username', default=GH_USER)
+parser.add_argument('-u', '--user', 
+                    help='Github Auth username and optional password', 
+                    metavar='USER[:PASS]', default=GH_USER)
 subparsers = parser.add_subparsers(title='Available Subcommands',
         description='Run "%(prog)s {subcommand} -h" for more information on each subcommand below.')
 
