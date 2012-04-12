@@ -6,11 +6,12 @@ import os
 import sys
 import re
 import getpass
+import errno
 from github import Github
 from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
 from urlparse import urlparse
-from subprocess import check_call, check_output, CalledProcessError
+from subprocess import check_call, check_output, Popen, PIPE, CalledProcessError
 
 ################################################
 # Global Vars
@@ -163,8 +164,20 @@ def list(args):
                       exclude_values=[None])
     print("Listing issues with filters:", args)
     if repo.has_issues:
+        pager = Popen(GIT_PAGER, stdin=PIPE)
         for issue in repo.get_issues(**args):
-            print(issue.number, issue.title)
+            try:
+                pager.stdin.write('%s %s\n' % (issue.number, issue.title))
+            except IOError as e:
+                if e.rrno == errno.EPIPE:
+                    # Stop looping on "Invalid pipe"
+                    break
+                else:
+                    # Raise any other error
+                    raise
+        # Flush and send EOF to pipe and wait for pager to terminate
+        pager.stdin.close()
+        pager.wait()
     else:
         print('This repo has no issues.')
 
