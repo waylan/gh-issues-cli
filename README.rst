@@ -29,7 +29,7 @@ Documention
 
 The entire command line interface is documented within the command's help 
 interface. Simply use the ``-h/--help`` flag from the command line for usage 
-documentation.::
+documentation::
 
     $ issues.py -h
 
@@ -85,7 +85,7 @@ Now, let's check to see if we have a response to our request for more info::
     #2 It says "Bad Foo" when I do `foo("bar")`.
 
 After pushing our fix, which included the text "fixed #5" in your commit 
-message, GitHub should haveclosed the issue automaticaly for us. Lets check::
+message, GitHub should have closed the issue automaticaly for us. Lets check::
     
     $ issues.py list
      2 Typo in Docs
@@ -99,14 +99,14 @@ list all closed issues::
      3 Silly typo
      1 A bad issue description
 
-Excellant! Now let's look at the alledged typo in the docs (issue #2).::
+Excellant! Now let's look at the alledged typo in the docs (issue #2)::
 
     $ issues.py show 2
     #2 Typo in Docs
 
     What is this "foo"? My spell checker keeps tripping up on it.
 
-Hmm, err, well, that's not a bug. Guess we need to educate our users.::
+Hmm, err, well, that's not a bug. Guess we need to educate our users::
 
     $ issue.py comment --new -m '"Foo" is sometimes used as a placeholder 
     name in computer programming or computer-related documentation. See 
@@ -144,8 +144,8 @@ automaticaly when you install gh-issues):
 * PyGithub_
 * Requests_
 
-.. PyGithub_: http://vincent-jacques.net/PyGithub
-.. Requests_: http://docs.python-requests.org/en/latest/index.html
+.. _PyGithub: http://vincent-jacques.net/PyGithub
+.. _Requests: http://docs.python-requests.org/en/latest/index.html
 
 Configuration
 ~~~~~~~~~~~~~
