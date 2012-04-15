@@ -35,7 +35,7 @@ except CalledProcessError as e:
 
 # set Github variables
 GH_USER = getpass.getuser()
-if GIT_REMOTE_URL.startswith('git@github.com/'):
+if GIT_REMOTE_URL.startswith('git@github.com:'):
     GH_PROJECT = GIT_REMOTE_URL[16:].rstrip('.git')
 
 elif GIT_REMOTE_URL.startswith('git@gist.github.com:') or \
@@ -159,9 +159,7 @@ comment_tmp ="""%(body)s
 def list(args):
     """ Run list command """
     repo = get_repo(args.user)
-    args = clean_args(args, 
-                      exclude_keys=['func', 'user'], 
-                      exclude_values=[None])
+    args = clean_args(args, exclude_keys=['func', 'user'])
     print("Listing issues with filters:", args)
     if repo.has_issues:
         pager = Popen(GIT_PAGER, stdin=PIPE)
@@ -195,9 +193,7 @@ def show(args):
 def edit(args):
     """ Run the edit command. """
     issue = args.issue
-    args = clean_args(args, 
-                      exclude_keys=['func', 'issue'],
-                      exclude_values = [None])
+    args = clean_args(args, exclude_keys=['func', 'issue', 'user'])
     if not args:
         print('Edit issue %s in editor. Args:' % issue, args)
     else:
@@ -241,18 +237,21 @@ ls_psr = subparsers.add_parser('list', help='List existing issues')
 ls_psr.add_argument('-m', '--milestone', 
     help='Filter by Milestone ID, "none" or "*" (default all)')
 ls_psr.add_argument('--state', choices=['open', 'closed'], 
+                    default=argparse.SUPPRESS, 
                     help='Filter by State, Default: "open"')
-ls_psr.add_argument('-a', '--assignee', 
+ls_psr.add_argument('-a', '--assignee', default=argparse.SUPPRESS, 
                     help='Filter by Assignee')
-ls_psr.add_argument('-@', '--mentioned', 
+ls_psr.add_argument('-@', '--mentioned', default=argparse.SUPPRESS, 
                     help='Filter by @MentionedUser')
-ls_psr.add_argument('-l', '--labels', nargs='+', 
+ls_psr.add_argument('-l', '--labels', nargs='+', default=argparse.SUPPRESS, 
                     help='Filter by Labels')
-ls_psr.add_argument('--sort', choices=['created', 'updated', 'comments'],
+ls_psr.add_argument('--sort', choices=['created', 'updated', 'comments'], 
+                    default=argparse.SUPPRESS,
                     help='Sort order, Default: "created"')
-ls_psr.add_argument('-d', '--direction', choices=['asc', 'desc'],
+ls_psr.add_argument('-d', '--direction', choices=['asc', 'desc'], 
+                    default=argparse.SUPPRESS,
                     help='Sort direction, Default: "desc"')
-ls_psr.add_argument('--since' , 
+ls_psr.add_argument('--since', default=argparse.SUPPRESS, 
     help='Filter by date (string of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)')
 ls_psr.set_defaults(func=list)
 
@@ -286,17 +285,19 @@ edt_psr = subparsers.add_parser('edit',
                 'If any flags are set, only the attributes ' \
                 'defined will be updated.')
 edt_psr.add_argument('issue', type=int, help='Issue ID number')
-edt_psr.add_argument('-m', '--message', dest='body',
+edt_psr.add_argument('-m', '--message', dest='body', default=argparse.SUPPRESS,
                      help='Edit Description of issue')
-edt_psr.add_argument('-t', '--title', help='Title of issue')
-edt_psr.add_argument('-a', '--assignee', 
+edt_psr.add_argument('-t', '--title', default=argparse.SUPPRESS, 
+                     help='Title of issue')
+edt_psr.add_argument('-a', '--assignee', default=argparse.SUPPRESS,
                      help='User this issue should be assigned to')
-edt_psr.add_argument('--milestone', type=int, 
+edt_psr.add_argument('--milestone', type=int, default=argparse.SUPPRESS,
                      help='Milestone to associate this issue with')
-edt_psr.add_argument('-l', '--labels' , nargs='+', 
+edt_psr.add_argument('-l', '--labels' , nargs='+', default=argparse.SUPPRESS,
                      help='Labels to associate with this issue')
-edt_psr.add_argument('-s', '--state', choices=[None, 'open', 'closed'], 
-                    help='Set the State ("open" or "closed")')
+edt_psr.add_argument('-s', '--state', choices=['open', 'closed'], 
+                     default=argparse.SUPPRESS,
+                     help='Set the State ("open" or "closed")')
 edt_psr.set_defaults(func=edit)
 
 
