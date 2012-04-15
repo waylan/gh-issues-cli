@@ -290,11 +290,13 @@ edt_psr.add_argument('-m', '--message', dest='body',
                      help='Edit Description of issue')
 edt_psr.add_argument('-t', '--title', help='Title of issue')
 edt_psr.add_argument('-a', '--assignee', 
-                     help='Login for the user that this issue should be assigned to')
+                     help='User this issue should be assigned to')
 edt_psr.add_argument('--milestone', type=int, 
                      help='Milestone to associate this issue with')
 edt_psr.add_argument('-l', '--labels' , nargs='+', 
                      help='Labels to associate with this issue')
+edt_psr.add_argument('-s', '--state', choices=[None, 'open', 'closed'], 
+                    help='Set the State ("open" or "closed")')
 edt_psr.set_defaults(func=edit)
 
 
