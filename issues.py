@@ -32,11 +32,10 @@ try:
 except CalledProcessError as e:
     sys.exit('Not a git repository or no "master" branch: %s' % e)
 
-
-# set Github variables
+# Set Github variables
 GH_USER = getpass.getuser()
 if GIT_REMOTE_URL.startswith('git@github.com:'):
-    GH_PROJECT = GIT_REMOTE_URL[16:].rstrip('.git')
+    GH_PROJECT, ext = os.path.splitext(GIT_REMOTE_URL[15:])
 
 elif GIT_REMOTE_URL.startswith('git@gist.github.com:') or \
      GIT_REMOTE_URL.startswith('git://gist.github.com/'):
@@ -48,7 +47,7 @@ else:
                  'Repository at "%s".' % GIT_REMOTE_URL)
     elif url.scheme == 'https' and url.hostname == 'github.com':
         GH_USER = url.username
-        GH_PROJECT = url.path.rstrip('.git').lstrip('/')
+        GH_PROJECT, ext = os.path.splitext(url.path.lstrip('/'))
     else:
         sys.exit('This Repo does not appear to be hosted at a known Github url.')
 
