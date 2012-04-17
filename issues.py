@@ -7,6 +7,8 @@ import sys
 import re
 import getpass
 import errno
+import requests
+import json
 from github import Github
 from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
@@ -55,6 +57,13 @@ else:
 ##################################################
 # Utility Functions
 ##################################################
+
+def get_token():
+    """ Get GitHub token from git config. """
+    try:
+        token = check_output('git config github.token', shell=True)
+    except CalledProcessError as e:
+        sys.exit('GitHub Auth not configured. Run the "init" subcommand.')
 
 def run_editor(txt):
     """ Edit the given text in the system default text editor. """        
@@ -114,12 +123,7 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
 
 def get_repo(auth):
     """ Return a Repo instance. """
-    if ':' in auth:
-        user, password = auth.split(':')
-    else:
-        # Prompt for password
-        user = auth
-        password = getpass.getpass()
+    user, password = auth.split(':')
     try:
         g = Github(user, password)
     except UnknownGithubObject:
@@ -154,6 +158,24 @@ comment_tmp ="""%(body)s
 ##################################################
 # Command Actions
 ##################################################
+
+def init(args):
+    """ Obtain and store token for future use. """
+    r = requests.post('https://api.github.com/authorizations', auth=args.user, 
+                data=json.dumps({'scopes':['repo'], 'note':'gh-issues-cli'}))
+    if r.status_code != requests.codes.ok:
+        sys.exit('Request for token failed. Check your username and password.')
+    data = json.loads(r.content)
+    g = ''
+    if args._global:
+        g = ' --global'
+    try:
+        check_call('git config%s github.token "%s"' % (g, data['token']), 
+                    shell=True)
+    except CalledProcessError as e:
+        sys.exit('Failed saving token: %s' % e)
+    print('Token #%s created and saved succesfully!' % data['id'])
+    print('Visit https://github.com/settings/applications to "revoke" this token.')
 
 def list(args):
     """ Run list command """
@@ -227,7 +249,7 @@ message_epilog = 'If the BODY is not provided, a blank document ' \
 parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
 parser.add_argument('-u', '--user', 
                     help='Github Auth username and optional password', 
-                    metavar='USER[:PASS]', default=GH_USER)
+                    metavar='USER[:PASS]')
 subparsers = parser.add_subparsers(title='Available Subcommands',
         description='Run "%(prog)s {subcommand} -h" for more information on each subcommand below.')
 
@@ -319,6 +341,19 @@ cmnt_psr.add_argument('-m', '--message', dest='body',
                       help='Comment body (use markdown for formatting)')
 cmnt_psr.set_defaults(func=comment)
 
+# The "init" command
+init_psr = subparsers.add_parser('init', help='Setup Auth.')
+init_psr.add_argument('--global', action='store_true', dest='_global',
+                      help='Save auth token to global git config')
+init_psr.set_defaults(func=init)
+
 if __name__ == '__main__':
     args = parser.parse_args()
+    if args.user is not None:
+        auth = args.user.split(':')
+        if len(auth) != 2:
+            # prompt for password
+            args.user = (auth[0], getpass.getpass())
+        else:
+            args.user = auth
     args.func(args)
