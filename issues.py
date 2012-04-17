@@ -13,7 +13,24 @@ from github import Github
 from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
 from urlparse import urlparse
-from subprocess import check_call, check_output, Popen, PIPE, CalledProcessError
+from subprocess import check_call, Popen, PIPE, CalledProcessError
+try:
+    from subprocess import check_output
+except ImportError:
+    # Backport check_output for Python 2.6
+    def check_output(*popenargs, **kwargs):
+        """ Run command with arguments and return its output as byte string. """
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = Popen(stdout=PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise CalledProcessError(retcode, cmd, output=output)
+        return output
 
 ################################################
 # Global Vars
