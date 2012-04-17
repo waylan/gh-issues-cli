@@ -168,14 +168,23 @@ be created and stored for later use. To create a token run the following command
     $ git-issues init --global --user myusername
 
 A new token will be obtained from Github and stored in your git config. Leave off
-the ``--global`` flagg if you want a differant token for a specific repo. From this
-poitn forward, the token will be used and you will not need to supply a username and
+the ``--global`` flag if you want a to set a token for a specific repo only. From this
+point forward, the token will be used and you will not need to supply a username and
 password.
 
-If in the future, your system becomes compromised, you can visit the `GitHub website`_ 
-and "revoke" the token to keep your account secure.
+If you already have a token and would like to manually save the token to your git config,
+run the following command::
 
-.. _GitHub website: https://github.com/settings/applications
+    $ git config --global github.token YOURTOKEN
+
+For more information on tokens and how to obtain them, see GitHub's `API Documentation`_.
+
+If, in the future, your token becomes compromised, you can visit our `Account Profile`_ 
+on GitHub and "revoke" the token to keep your account secure. The token that you would
+want to "revoke" should be labeled "gh-issues-cli."
+
+.. _API Documentation: http://developer.github.com/v3/oauth/#create-a-new-authorization
+.. _Account Profile: https://github.com/settings/applications
 
 .. note:: If you push and pull from GitHub over http(s), and you don't want to 
    use an OAuth token, gh-issues will extract your GitHub username from your git 
