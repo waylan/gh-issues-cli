@@ -9,8 +9,6 @@ import getpass
 import errno
 import requests
 import json
-#from github import Github
-#from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
 from urlparse import urlparse, urljoin
 from subprocess import check_call, Popen, PIPE, CalledProcessError
@@ -251,14 +249,15 @@ def init(args):
 
 def list(args):
     """ Run list command """
-    repo = get_repo(args.user)
-    args = clean_args(args, exclude_keys=['func', 'user'])
-    print("Listing issues with filters:", args)
-    if repo.has_issues:
+    url = '/repos/:user/:repo/issues'
+    filters = clean_args(args, exclude_keys=['func', 'user'])
+    issues = request('get', url, params=filters, auth=args.user)
+    if issues:
+        print("Listing %d issues with filters:" % len(issues), filters)
         pager = Popen(GIT_PAGER, stdin=PIPE)
-        for issue in repo.get_issues(**args):
+        for issue in issues:
             try:
-                pager.stdin.write('%s %s\n' % (issue.number, issue.title))
+                pager.stdin.write('%s %s\n' % (issue['number'], issue['title']))
             except IOError as e:
                 if e.rrno == errno.EPIPE:
                     # Stop looping on "Invalid pipe"
@@ -270,7 +269,7 @@ def list(args):
         pager.stdin.close()
         pager.wait()
     else:
-        print('This repo has no issues.')
+        print('This repo has no issues matching filters:', filters)
 
 
 def new(args):
@@ -341,7 +340,7 @@ subparsers = parser.add_subparsers(title='Available Subcommands',
 # The "list" command
 ls_psr = subparsers.add_parser('list', parents=[user_psr],
                                 help='List existing issues')
-ls_psr.add_argument('-m', '--milestone', 
+ls_psr.add_argument('-m', '--milestone', default=argparse.SUPPRESS, 
     help='Filter by Milestone ID, "none" or "*" (default all)')
 ls_psr.add_argument('--state', choices=['open', 'closed'], 
                     default=argparse.SUPPRESS, 

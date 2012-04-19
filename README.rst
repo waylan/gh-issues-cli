@@ -128,7 +128,7 @@ interface, so at a minimum the following needs to be installed on your system:
 * `Python 2.6+`_
 
 .. _Git: http://git-scm.com/
-.. _Python 2.7+: http://python.org
+.. _Python 2.6+: http://python.org
 
 No doubt, some of you may have older versions of python installed on your 
 system. Unfortunately, gh-issues uses some features that were only introduced 
@@ -138,11 +138,9 @@ versions earlier than 2.6.
 Additionaly, the following python libraries are needed (and should be installed
 automaticaly when you install gh-issues):
 
-* PyGithub_
 * Requests_
 * Argparse_ (only for Python 2.6)
 
-.. _PyGithub: http://vincent-jacques.net/PyGithub
 .. _Requests: http://docs.python-requests.org/en/latest/index.html
 .. _Argparse: https://code.google.com/p/argparse/
 
