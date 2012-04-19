@@ -76,14 +76,22 @@ else:
 ##################################################
 
 class GHAuth(requests.auth.AuthBase):
-    """ Attach a GitHub Token to Request for Authentication. """
+    """ Attach a GitHub Authentication to Request. """
 
-    def __init__(self):
-        self.token = self.get_token()
+    def __init__(self, user=None):
+        self.token = self.username = self.password = None
+        if user:
+            self.username, self.password = user
+        else:
+            self.token = self.get_token()
 
     def __call__(self, r):
-        """ Add token to request header """
-        r.headers['Authorization'] = 'token ' + self.token
+        """ Add Authorization header """
+        if self.token:
+            r.headers['Authorization'] = 'token ' + self.token
+        else:
+            r.headers['Authorization'] = requests.auth._basic_auth_str(
+                                                self.username, self.password)
         return r
 
     def get_token(self):
@@ -238,7 +246,7 @@ def new(args):
 def show(args):
     """ Run show command """
     url = 'https://api.github.com/repos/%s/issues/%s' % (GH_PROJECT, args.issue)
-    r = requests.get(url, auth=GHAuth())
+    r = requests.get(url, auth=GHAuth(args.user))
     print("Show Issue %s" % args.issue)
     print(r)
     print(r.content)
