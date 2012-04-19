@@ -14,6 +14,7 @@ from github.Requester import UnknownGithubObject
 from tempfile import mkstemp
 from urlparse import urlparse
 from subprocess import check_call, Popen, PIPE, CalledProcessError
+
 try:
     from subprocess import check_output
 except ImportError:
@@ -32,9 +33,11 @@ except ImportError:
             raise CalledProcessError(retcode, cmd, output=output)
         return output
 
+
 ################################################
 # Global Vars
 ################################################
+
 
 # Set git variables
 try:
@@ -71,19 +74,36 @@ else:
         sys.exit('This Repo does not appear to be hosted at a known Github url.')
 
 
+
 ##################################################
 # Utility Functions
 ##################################################
 
+
+def get_pass(user):
+    """ Get password for user. """
+    if user is None:
+        user = raw_input('Username (%s): ' % GH_USER) or GH_USER
+    auth = user.split(':')
+    if len(auth) < 2:
+        # prompt for password
+        auth = (auth[0], getpass.getpass())
+    return auth[:2]
+
+
 class GHAuth(requests.auth.AuthBase):
-    """ Attach a GitHub Authentication to Request. """
+    """ Attach GitHub Authentication to Request. """
 
     def __init__(self, user=None):
         self.token = self.username = self.password = None
         if user:
-            self.username, self.password = user
+            self.username, self.password = get_pass(user)
         else:
-            self.token = self.get_token()
+            try:
+                self.token = check_output('git config github.token', 
+                                          shell=True).strip()
+            except CalledProcessError:
+                self.username, self.password = get_pass(user)
 
     def __call__(self, r):
         """ Add Authorization header """
@@ -94,12 +114,7 @@ class GHAuth(requests.auth.AuthBase):
                                                 self.username, self.password)
         return r
 
-    def get_token(self):
-        """ Get GitHub token from git config. """
-        try:
-            return check_output('git config github.token', shell=True).strip()
-        except CalledProcessError as e:
-            sys.exit('GitHub Auth not configured. Run the "init" subcommand.')
+
 
 def run_editor(txt):
     """ Edit the given text in the system default text editor. """        
@@ -117,6 +132,7 @@ def run_editor(txt):
     contents = open(tmpfile).read()
     os.unlink(tmpfile)
     return contents
+
 
 ARG_RE = re.compile(r'^([A-Z]+): (.*)')
 
@@ -149,6 +165,7 @@ def get_message(args, template, context=None):
     if not args['body']:
         sys.exit("Action aborted! Message is empty.")
 
+
 def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
     d = {}
@@ -156,6 +173,7 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
         if  k not in exclude_keys and v not in exclude_values:
             d[k] = v
     return d
+
 
 def get_repo(auth):
     """ Return a Repo instance. """
@@ -176,6 +194,7 @@ def get_repo(auth):
 # Message Templates
 ##################################################
 
+
 issue_tmp ="""%(body)s
 # Please enter/edit a description for your issue above. You may use 
 # Markdown to format your text. Lines starting with a '#' will be 
@@ -195,9 +214,11 @@ comment_tmp ="""%(body)s
 # Command Actions
 ##################################################
 
+
 def init(args):
     """ Obtain and store token for future use. """
-    r = requests.post('https://api.github.com/authorizations', auth=args.user, 
+    auth = get_pass(args.user)
+    r = requests.post('https://api.github.com/authorizations', auth=auth, 
                 data=json.dumps({'scopes':['repo'], 'note':'gh-issues-cli'}))
     if r.status_code != requests.codes.ok:
         sys.exit('Request for token failed. Check your username and password.')
@@ -212,6 +233,7 @@ def init(args):
         sys.exit('Failed saving token: %s' % e)
     print('Token #%s created and saved succesfully!' % data['id'])
     print('Visit https://github.com/settings/applications to "revoke" this token.')
+
 
 def list(args):
     """ Run list command """
@@ -236,12 +258,14 @@ def list(args):
     else:
         print('This repo has no issues.')
 
+
 def new(args):
     """ Run new command """
     args = clean_args(args, exclude_keys=['func'])
     if args['body'] is None:
         get_message(args, issue_tmp)
     print("New issue:", args)
+
 
 def show(args):
     """ Run show command """
@@ -251,6 +275,7 @@ def show(args):
     print(r)
     print(r.content)
 
+
 def edit(args):
     """ Run the edit command. """
     issue = args.issue
@@ -259,6 +284,7 @@ def edit(args):
         print('Edit issue %s in editor. Args:' % issue, args)
     else:
         print('Edit issue %s with Args:' % issue, args)
+
 
 def comment(args):
     if args.list:
@@ -276,6 +302,7 @@ def comment(args):
     elif args.delete:
         print("Delete comment#", args.delete)
 
+
 ##################################################
 # Command Line Parser
 ##################################################
@@ -285,16 +312,22 @@ message_epilog = 'If the BODY is not provided, a blank document ' \
                  'to be provided. If the editor is closed with ' \
                  'a blank document, the action will be aborted.'
 
-# The "issue" command
-parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
-parser.add_argument('-u', '--user', 
+# The "user" argument parser
+user_psr = argparse.ArgumentParser(add_help=False)
+user_psr.add_argument('-u', '--user', 
                     help='Github Auth username and optional password', 
                     metavar='USER[:PASS]')
+
+
+# The "issue" command
+parser = argparse.ArgumentParser(description="Manage Github Issues from the Command Line")
 subparsers = parser.add_subparsers(title='Available Subcommands',
         description='Run "%(prog)s {subcommand} -h" for more information on each subcommand below.')
 
+
 # The "list" command
-ls_psr = subparsers.add_parser('list', help='List existing issues')
+ls_psr = subparsers.add_parser('list', parents=[user_psr],
+                                help='List existing issues')
 ls_psr.add_argument('-m', '--milestone', 
     help='Filter by Milestone ID, "none" or "*" (default all)')
 ls_psr.add_argument('--state', choices=['open', 'closed'], 
@@ -318,7 +351,7 @@ ls_psr.set_defaults(func=list)
 
 
 # The "new" command
-new_psr = subparsers.add_parser('new', 
+new_psr = subparsers.add_parser('new', parents=[user_psr],
                 help='Create a new issue', epilog=message_epilog)
 new_psr.add_argument('title', help='Title of issue')
 new_psr.add_argument('-m', '--message', dest='body', 
@@ -332,14 +365,14 @@ new_psr.add_argument('-l', '--labels', nargs='+',
 new_psr.set_defaults(func=new)
 
 # The "show" command
-show_psr = subparsers.add_parser('show', 
+show_psr = subparsers.add_parser('show', parents=[user_psr],
                 help='Display an existing issue')
 show_psr.add_argument('issue', type=int, 
                       help='Issue ID number')
 show_psr.set_defaults(func=show)
 
 # The "edit" command
-edt_psr = subparsers.add_parser('edit', 
+edt_psr = subparsers.add_parser('edit', parents=[user_psr],
                 help='Edit an existing issue', 
                 epilog='If no flags are set, the entire issue ' \
                 'will be opened as a document in the editor. ' \
@@ -363,7 +396,7 @@ edt_psr.set_defaults(func=edit)
 
 
 # The "comment" command
-cmnt_psr = subparsers.add_parser('comment', 
+cmnt_psr = subparsers.add_parser('comment', parents=[user_psr],
                  help='Comment on an existing issue', 
                  epilog=message_epilog)
 cmnt_gp = cmnt_psr.add_mutually_exclusive_group(required=True)
@@ -381,19 +414,15 @@ cmnt_psr.add_argument('-m', '--message', dest='body',
                       help='Comment body (use markdown for formatting)')
 cmnt_psr.set_defaults(func=comment)
 
+
 # The "init" command
-init_psr = subparsers.add_parser('init', help='Setup Auth.')
+init_psr = subparsers.add_parser('init', parents=[user_psr],
+                                 help='Setup Auth.')
 init_psr.add_argument('--global', action='store_true', dest='_global',
                       help='Save auth token to global git config')
 init_psr.set_defaults(func=init)
 
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    if args.user is not None:
-        auth = args.user.split(':')
-        if len(auth) != 2:
-            # prompt for password
-            args.user = (auth[0], getpass.getpass())
-        else:
-            args.user = auth
     args.func(args)
