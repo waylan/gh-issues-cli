@@ -182,24 +182,9 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
     d = {}
     for k, v in args._get_kwargs():
-        if  k not in exclude_keys and v not in exclude_values:
+        if k not in exclude_keys and v not in exclude_values:
             d[k] = v
     return d
-
-
-def get_repo(auth):
-    """ Return a Repo instance. """
-    user, password = auth.split(':')
-    try:
-        g = Github(user, password)
-    except UnknownGithubObject:
-        sys.exit('Bad username:password provided for github.')
-    ruser, rname = GH_PROJECT.split('/')
-    try:
-        ghu = g.get_user(ruser)
-        return ghu.get_repo(rname)
-    except UnknownGithubObject:
-        sys.exit('No such Repo: %s' % GH_PROJECT)
 
 
 ##################################################
