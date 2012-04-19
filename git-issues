@@ -123,7 +123,7 @@ def request(method, url, **kwargs):
         kwargs['auth'] = GHAuth(None)
     res = requests.request(method, url, **kwargs)
     if res.status_code not in [requests.codes.ok, requests.codes.created]:
-        print(res.request)
+        print(res.request) #TODO only print this if verbose
         sys.exit('Error: "%s" for url: "%s"' % \
                  (json.loads(res.text)['message'], res.url))
     return json.loads(res.text)
@@ -149,19 +149,20 @@ def run_editor(txt):
 
 ARG_RE = re.compile(r'^([A-Z]+): (.*)')
 
-def get_message(args, template, context=None):
+def get_message(args, template, use_keys=[]):
     """ Get message from EDITOR. """
-    if context is None:
-        context = {}
+    context = {}
     for k, v in args.items():
         if v is None:
             v = ''
         elif k == 'labels':
             v = ' '.join(v)
-        context[k] = v
+        if k in use_keys:
+            context[k] = v
     message = run_editor(template % context)
     body = []
     end_of_body = False
+    new = {}
     for line in message.split('\n'):
         if not line.startswith('#') and not end_of_body:
             body.append(line)
@@ -173,10 +174,12 @@ def get_message(args, template, context=None):
                 value = m.group(2)
                 if key == 'labels':
                     value = value.split()
-                args[key] = value
-    args['body'] = '\n'.join(body).strip()
-    if not args['body']:
+                if value:
+                    new[key] = value
+    new['body'] = '\n'.join(body).strip()
+    if not new['body']:
         sys.exit("Action aborted! Message is empty.")
+    return new
 
 
 def clean_args(args, exclude_keys=[], exclude_values=[]):
@@ -262,7 +265,8 @@ def new(args):
     """ Run new command """
     data = clean_args(args, exclude_keys=['func', 'user'])
     if data['body'] is None:
-        get_message(data, issue_tmp)
+        data = get_message(data, issue_tmp, 
+                ['title', 'body', 'assignee', 'milestone', 'labels'])
     url = '/repos/:user/:repo/issues'
     issue = request('post', url, data=json.dumps(data), auth=args.user)
     print("Successfully created issue #%d:" % issue['number'], issue['title'])
@@ -278,12 +282,16 @@ def show(args):
 
 def edit(args):
     """ Run the edit command. """
-    issue = args.issue
-    args = clean_args(args, exclude_keys=['func', 'issue', 'user'])
-    if not args:
-        print('Edit issue %s in editor. Args:' % issue, args)
-    else:
-        print('Edit issue %s with Args:' % issue, args)
+    url = '/repos/:user/:repo/issues/%s' % args.issue
+    data = clean_args(args, exclude_keys=['func', 'issue', 'user'])
+    if not data:
+        # Retrieve issue and display in editor
+        data = request('get', url, auth=args.user)
+        data = get_message(data, issue_tmp, 
+                ['title', 'body', 'assignee', 'state', 'milestone', 'labels']) 
+    # Sumbit new data
+    issue = request('patch', url, data=json.dumps(data), auth=args.user)
+    print("Successfully edited issue #%d:" % issue['number'], issue['title'])
 
 
 def comment(args):
