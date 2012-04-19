@@ -122,7 +122,8 @@ def request(method, url, **kwargs):
     else:
         kwargs['auth'] = GHAuth(None)
     res = requests.request(method, url, **kwargs)
-    if res.status_code != requests.codes.ok:
+    if res.status_code not in [requests.codes.ok, requests.codes.created]:
+        print(res.request)
         sys.exit('Error: "%s" for url: "%s"' % \
                  (json.loads(res.text)['message'], res.url))
     return json.loads(res.text)
@@ -259,10 +260,12 @@ def list(args):
 
 def new(args):
     """ Run new command """
-    args = clean_args(args, exclude_keys=['func'])
-    if args['body'] is None:
-        get_message(args, issue_tmp)
-    print("New issue:", args)
+    data = clean_args(args, exclude_keys=['func', 'user'])
+    if data['body'] is None:
+        get_message(data, issue_tmp)
+    url = '/repos/:user/:repo/issues'
+    issue = request('post', url, data=json.dumps(data), auth=args.user)
+    print("Successfully created issue #%d:" % issue['number'], issue['title'])
 
 
 def show(args):
