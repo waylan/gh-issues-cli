@@ -75,12 +75,23 @@ else:
 # Utility Functions
 ##################################################
 
-def get_token():
-    """ Get GitHub token from git config. """
-    try:
-        token = check_output('git config github.token', shell=True)
-    except CalledProcessError as e:
-        sys.exit('GitHub Auth not configured. Run the "init" subcommand.')
+class GHAuth(requests.auth.AuthBase):
+    """ Attach a GitHub Token to Request for Authentication. """
+
+    def __init__(self):
+        self.token = self.get_token()
+
+    def __call__(self, r):
+        """ Add token to request header """
+        r.headers['Authorization'] = 'token ' + self.token
+        return r
+
+    def get_token(self):
+        """ Get GitHub token from git config. """
+        try:
+            return check_output('git config github.token', shell=True).strip()
+        except CalledProcessError as e:
+            sys.exit('GitHub Auth not configured. Run the "init" subcommand.')
 
 def run_editor(txt):
     """ Edit the given text in the system default text editor. """        
@@ -226,7 +237,11 @@ def new(args):
 
 def show(args):
     """ Run show command """
+    url = 'https://api.github.com/repos/%s/issues/%s' % (GH_PROJECT, args.issue)
+    r = requests.get(url, auth=GHAuth())
     print("Show Issue %s" % args.issue)
+    print(r)
+    print(r.content)
 
 def edit(args):
     """ Run the edit command. """
