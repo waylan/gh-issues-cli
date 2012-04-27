@@ -81,12 +81,13 @@ else:
 def get_pass(user):
     """ Get password for user. """
     if user is None:
+        # Prompt for username. Default to GH_USER.
         user = raw_input('Username (%s): ' % GH_USER) or GH_USER
-    auth = user.split(':')
+    auth = user.split(':', 1)
     if len(auth) < 2:
         # prompt for password
-        auth = (auth[0], getpass.getpass())
-    return auth[:2]
+        auth.append(getpass.getpass())
+    return auth
 
 
 class GHAuth(requests.auth.AuthBase):
@@ -117,10 +118,7 @@ def request(method, url, **kwargs):
     """ Request Wrapper to keep things DRY. """
     url = urljoin('https://api.github.com/', 
                   url.replace(':user/:repo', GH_PROJECT))
-    if kwargs.has_key('auth'):
-        kwargs['auth'] = GHAuth(kwargs['auth'])
-    else:
-        kwargs['auth'] = GHAuth(None)
+    kwargs['auth'] = GHAuth(kwargs.get('auth', None))
     res = requests.request(method, url, **kwargs)
     if res.status_code not in [requests.codes.ok, requests.codes.created]:
         print(res.request) #TODO only print this if verbose
