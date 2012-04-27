@@ -87,7 +87,7 @@ def get_pass(user):
     if len(auth) < 2:
         # prompt for password
         auth.append(getpass.getpass())
-    return auth
+    return tuple(auth)
 
 
 class GHAuth(requests.auth.AuthBase):
@@ -217,14 +217,25 @@ comment_tmp ="""%(body)s
 def init(args):
     """ Obtain and store token for future use. """
     auth = get_pass(args.user)
+    if args._global:
+        g = ' --global'
+        prompt = 'Please enter a unique name for this system.'
+        try:
+            
+            desc = check_output('uname -n', shell=True).strip()
+            prompt += ' Default if blank: "%s"' % desc
+        except CalledProcessError:
+            desc = ''
+    else:
+        g = desc = ''
+        prompt = 'Please enter a unique name for this repo on this system.'
+    print(prompt)
+    desc = 'gh-issues-cli for ' + raw_input('Name: ') or desc
     r = requests.post('https://api.github.com/authorizations', auth=auth, 
-                data=json.dumps({'scopes':['repo'], 'note':'gh-issues-cli'}))
+                data=json.dumps({'scopes' : ['repo'], 'note' : desc}))
     if r.status_code != requests.codes.ok:
         sys.exit('Request for token failed. Check your username and password.')
     data = json.loads(r.text)
-    g = ''
-    if args._global:
-        g = ' --global'
     try:
         check_call('git config%s github.token "%s"' % (g, data['token']), 
                     shell=True)
