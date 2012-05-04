@@ -45,9 +45,9 @@ except CalledProcessError as e:
     sys.exit('Git not configured properly: %s' % e)
 
 try:
-    GIT_REMOTE = check_output('git config branch.master.remote', 
+    GIT_REMOTE = check_output('git config branch.master.remote',
                               shell=True).strip() # Assume "master"
-    GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE, 
+    GIT_REMOTE_URL = check_output('git config remote.%s.url' % GIT_REMOTE,
                                   shell=True).strip()
 except CalledProcessError as e:
     sys.exit('Not a git repository or no "master" branch: %s' % e)
@@ -99,7 +99,7 @@ class GHAuth(requests.auth.AuthBase):
             self.username, self.password = get_pass(user)
         else:
             try:
-                self.token = check_output('git config github.token', 
+                self.token = check_output('git config github.token',
                                           shell=True).strip()
             except CalledProcessError:
                 self.username, self.password = get_pass(user)
@@ -116,7 +116,7 @@ class GHAuth(requests.auth.AuthBase):
 
 def request(method, url, **kwargs):
     """ Request Wrapper to keep things DRY. """
-    url = urljoin('https://api.github.com/', 
+    url = urljoin('https://api.github.com/',
                   url.replace(':user/:repo', GH_PROJECT))
     kwargs['auth'] = GHAuth(kwargs.get('auth', None))
     res = requests.request(method, url, **kwargs)
@@ -128,12 +128,12 @@ def request(method, url, **kwargs):
 
 
 def run_editor(txt):
-    """ Edit the given text in the system default text editor. """        
-    
+    """ Edit the given text in the system default text editor. """
+
     fd, tmpfile = mkstemp()
     os.write(fd, txt or "")
     os.close(fd)
-    
+
     try:
         check_call("%s %s" % (GIT_EDITOR, tmpfile), shell=True)
     except CalledProcessError as e:
@@ -195,17 +195,17 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
 
 
 issue_tmp ="""%(body)s
-# Please enter/edit a description for your issue above. You may use 
-# Markdown to format your text. Lines starting with a '#' will be 
-# ignored. A blank description will abort the action. To edit other 
+# Please enter/edit a description for your issue above. You may use
+# Markdown to format your text. Lines starting with a '#' will be
+# ignored. A blank description will abort the action. To edit other
 # attributes of an issue, edit the text after each colon below:
 TITLE: %(title)s
 MILESTONE: %(milestone)s
 LABELS: %(labels)s"""
 
 comment_tmp ="""%(body)s
-# Please enter a comment for issue %(issue)s above. You may use 
-# Markdown to format your text. Lines starting with a '#' will be 
+# Please enter a comment for issue %(issue)s above. You may use
+# Markdown to format your text. Lines starting with a '#' will be
 # ignored. A blank description will abort creation of the comment."""
 
 
@@ -217,31 +217,33 @@ comment_tmp ="""%(body)s
 def init(args):
     """ Obtain and store token for future use. """
     auth = get_pass(args.user)
+    desc = 'gh-issues-cli'
+    token = None
+    # First check for existing token
+    r = requests.get('https://api.github.com/authorizations', auth=auth)
+    if r.status_code == requests.codes.ok:
+        tokens = json.loads(r.text)
+        for t in tokens:
+            if t['note'] == desc:
+                token = t['token']
+                break
+    if not token:
+        # Get new token
+        r = requests.post('https://api.github.com/authorizations', auth=auth,
+                    data=json.dumps({'scopes' : ['repo'], 'note': desc}))
+        if r.status_code != requests.codes.ok:
+            sys.exit('Request for token failed.')
+        token = json.loads(r.text)['token']
+    # Save token to git config
+    g = ''
     if args._global:
         g = ' --global'
-        prompt = 'Please enter a unique name for this system.'
-        try:
-            
-            desc = check_output('uname -n', shell=True).strip()
-            prompt += ' Default if blank: "%s"' % desc
-        except CalledProcessError:
-            desc = ''
-    else:
-        g = desc = ''
-        prompt = 'Please enter a unique name for this repo on this system.'
-    print(prompt)
-    desc = 'gh-issues-cli for ' + raw_input('Name: ') or desc
-    r = requests.post('https://api.github.com/authorizations', auth=auth, 
-                data=json.dumps({'scopes' : ['repo'], 'note' : desc}))
-    if r.status_code != requests.codes.ok:
-        sys.exit('Request for token failed. Check your username and password.')
-    data = json.loads(r.text)
     try:
-        check_call('git config%s github.token "%s"' % (g, data['token']), 
+        check_call('git config%s github.token "%s"' % (g, token),
                     shell=True)
     except CalledProcessError as e:
         sys.exit('Failed saving token: %s' % e)
-    print('Token #%s created and saved succesfully!' % data['id'])
+    print('Token for "%s" created and saved succesfully!' % desc)
     print('Visit https://github.com/settings/applications to "revoke" this token.')
 
 
@@ -274,7 +276,7 @@ def new(args):
     """ Run new command """
     data = clean_args(args, exclude_keys=['func', 'user'])
     if data['body'] is None:
-        data = get_message(data, issue_tmp, 
+        data = get_message(data, issue_tmp,
                 ['title', 'body', 'assignee', 'milestone', 'labels'])
     url = '/repos/:user/:repo/issues'
     issue = request('post', url, data=json.dumps(data), auth=args.user)
@@ -296,8 +298,8 @@ def edit(args):
     if not data:
         # Retrieve issue and display in editor
         data = request('get', url, auth=args.user)
-        data = get_message(data, issue_tmp, 
-                ['title', 'body', 'assignee', 'state', 'milestone', 'labels']) 
+        data = get_message(data, issue_tmp,
+                ['title', 'body', 'assignee', 'state', 'milestone', 'labels'])
     # Sumbit new data
     issue = request('patch', url, data=json.dumps(data), auth=args.user)
     print("Successfully edited issue #%d:" % issue['number'], issue['title'])
@@ -331,8 +333,8 @@ message_epilog = 'If the BODY is not provided, a blank document ' \
 
 # The "user" argument parser
 user_psr = argparse.ArgumentParser(add_help=False)
-user_psr.add_argument('-u', '--user', 
-                    help='Github Auth username and optional password', 
+user_psr.add_argument('-u', '--user',
+                    help='Github Auth username and optional password',
                     metavar='USER[:PASS]')
 
 
@@ -345,24 +347,24 @@ subparsers = parser.add_subparsers(title='Available Subcommands',
 # The "list" command
 ls_psr = subparsers.add_parser('list', parents=[user_psr],
                                 help='List existing issues')
-ls_psr.add_argument('-m', '--milestone', default=argparse.SUPPRESS, 
+ls_psr.add_argument('-m', '--milestone', default=argparse.SUPPRESS,
     help='Filter by Milestone ID, "none" or "*" (default all)')
-ls_psr.add_argument('--state', choices=['open', 'closed'], 
-                    default=argparse.SUPPRESS, 
+ls_psr.add_argument('--state', choices=['open', 'closed'],
+                    default=argparse.SUPPRESS,
                     help='Filter by State, Default: "open"')
-ls_psr.add_argument('-a', '--assignee', default=argparse.SUPPRESS, 
+ls_psr.add_argument('-a', '--assignee', default=argparse.SUPPRESS,
                     help='Filter by Assignee')
-ls_psr.add_argument('-@', '--mentioned', default=argparse.SUPPRESS, 
+ls_psr.add_argument('-@', '--mentioned', default=argparse.SUPPRESS,
                     help='Filter by @MentionedUser')
-ls_psr.add_argument('-l', '--labels', nargs='+', default=argparse.SUPPRESS, 
+ls_psr.add_argument('-l', '--labels', nargs='+', default=argparse.SUPPRESS,
                     help='Filter by Labels')
-ls_psr.add_argument('--sort', choices=['created', 'updated', 'comments'], 
+ls_psr.add_argument('--sort', choices=['created', 'updated', 'comments'],
                     default=argparse.SUPPRESS,
                     help='Sort order, Default: "created"')
-ls_psr.add_argument('-d', '--direction', choices=['asc', 'desc'], 
+ls_psr.add_argument('-d', '--direction', choices=['asc', 'desc'],
                     default=argparse.SUPPRESS,
                     help='Sort direction, Default: "desc"')
-ls_psr.add_argument('--since', default=argparse.SUPPRESS, 
+ls_psr.add_argument('--since', default=argparse.SUPPRESS,
     help='Filter by date (string of a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)')
 ls_psr.set_defaults(func=list)
 
@@ -371,26 +373,26 @@ ls_psr.set_defaults(func=list)
 new_psr = subparsers.add_parser('new', parents=[user_psr],
                 help='Create a new issue', epilog=message_epilog)
 new_psr.add_argument('title', help='Title of issue')
-new_psr.add_argument('-m', '--message', dest='body', 
+new_psr.add_argument('-m', '--message', dest='body',
                      help='Description of issue')
-new_psr.add_argument('-a', '--assignee', 
+new_psr.add_argument('-a', '--assignee',
                     help='User this issue should be assigned to')
-new_psr.add_argument('--milestone', type=int, 
+new_psr.add_argument('--milestone', type=int,
                      help='Milestone to associate this issue with')
-new_psr.add_argument('-l', '--labels', nargs='+', 
+new_psr.add_argument('-l', '--labels', nargs='+',
                      help='Labels to associate with this issue')
 new_psr.set_defaults(func=new)
 
 # The "show" command
 show_psr = subparsers.add_parser('show', parents=[user_psr],
                 help='Display an existing issue')
-show_psr.add_argument('issue', type=int, 
+show_psr.add_argument('issue', type=int,
                       help='Issue ID number')
 show_psr.set_defaults(func=show)
 
 # The "edit" command
 edt_psr = subparsers.add_parser('edit', parents=[user_psr],
-                help='Edit an existing issue', 
+                help='Edit an existing issue',
                 epilog='If no flags are set, the entire issue ' \
                 'will be opened as a document in the editor. ' \
                 'If any flags are set, only the attributes ' \
@@ -398,7 +400,7 @@ edt_psr = subparsers.add_parser('edit', parents=[user_psr],
 edt_psr.add_argument('issue', type=int, help='Issue ID number')
 edt_psr.add_argument('-m', '--message', dest='body', default=argparse.SUPPRESS,
                      help='Edit Description of issue')
-edt_psr.add_argument('-t', '--title', default=argparse.SUPPRESS, 
+edt_psr.add_argument('-t', '--title', default=argparse.SUPPRESS,
                      help='Title of issue')
 edt_psr.add_argument('-a', '--assignee', default=argparse.SUPPRESS,
                      help='User this issue should be assigned to')
@@ -406,7 +408,7 @@ edt_psr.add_argument('--milestone', type=int, default=argparse.SUPPRESS,
                      help='Milestone to associate this issue with')
 edt_psr.add_argument('-l', '--labels' , nargs='+', default=argparse.SUPPRESS,
                      help='Labels to associate with this issue')
-edt_psr.add_argument('-s', '--state', choices=['open', 'closed'], 
+edt_psr.add_argument('-s', '--state', choices=['open', 'closed'],
                      default=argparse.SUPPRESS,
                      help='Set the State ("open" or "closed")')
 edt_psr.set_defaults(func=edit)
@@ -414,20 +416,20 @@ edt_psr.set_defaults(func=edit)
 
 # The "comment" command
 cmnt_psr = subparsers.add_parser('comment', parents=[user_psr],
-                 help='Comment on an existing issue', 
+                 help='Comment on an existing issue',
                  epilog=message_epilog)
 cmnt_gp = cmnt_psr.add_mutually_exclusive_group(required=True)
 cmnt_gp.add_argument('-l', '--list',  metavar='ISSUE_ID',
                      help='List comments for given issue')
 cmnt_gp.add_argument('-s', '--show', metavar='COMMENT_ID',
                      help='Display a comment')
-cmnt_gp.add_argument('-n', '--new', metavar='ISSUE_ID', 
+cmnt_gp.add_argument('-n', '--new', metavar='ISSUE_ID',
                      help='Create a comment')
-cmnt_gp.add_argument('-e', '--edit', metavar='COMMENT_ID', 
+cmnt_gp.add_argument('-e', '--edit', metavar='COMMENT_ID',
                      help='Edit a comment')
 cmnt_gp.add_argument('-d', '--delete', metavar='COMMENT_ID',
                      help='Delete a comment')
-cmnt_psr.add_argument('-m', '--message', dest='body', 
+cmnt_psr.add_argument('-m', '--message', dest='body',
                       help='Comment body (use markdown for formatting)')
 cmnt_psr.set_defaults(func=comment)
 
