@@ -370,10 +370,27 @@ def show(args):
         pager.write(' ' + '='*(pager.width-2))
         pager.write()
         if issue['state'] == 'closed':
-            pager.write('   CLOSED by {0[closed_by]}.'.format(issue))
-            pager.write()
+            pager.write(
+                '     State: CLOSED (by {0[closed_by][login]})'.format(issue))
+        else:
+            pager.write('     State: OPEN')
+        pager.write('      User: {0[user][login]}'.format(issue))
+        if issue['assignee']:
+            pager.write('  Assingee: {0[assignee][login]}'.format(issue))
+        if issue['milestone']:
+            pager.write(' Milestone: {0[milestone][title]}'.format(issue))
+        if issue['labels']:
+            pager.write('    Labels: ' + 
+                        wrap_text(', '.join(l['name'] for l in issue['labels']),
+                                  width=pager.width, indent=12).strip())
+        pager.write('   Created: {0[created_at]}'.format(issue))
+        if issue['updated_at'] and issue['updated_at'] != issue['created_at']:
+            pager.write('   Updated: {0[updated_at]}'.format(issue))
+        pager.write('  Comments: {0[comments]}'.format(issue))
+        pager.write('\n ' + '-'*(pager.width-2) + '\n')
         pager.write(wrap_text(issue['body'], pager.width-2, 1))
         pager.write()
+        pager.write(' ' + '-'*(pager.width-2))
     finally:
         pager.close()
 
