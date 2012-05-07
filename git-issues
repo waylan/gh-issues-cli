@@ -40,7 +40,6 @@ except ImportError:
 # Set git variables
 try:
     GIT_EDITOR = check_output('git var GIT_EDITOR', shell=True).strip()
-    GIT_PAGER = check_output('git var GIT_PAGER', shell=True).strip()
 except CalledProcessError as e:
     sys.exit('Git not configured properly: %s' % e)
 
@@ -180,6 +179,38 @@ def get_message(args, template, use_keys=[]):
     return new
 
 
+class Pager():
+    """ Wrapper Pager for multiple writes. """
+
+    def __init__(self):
+        self.proc = None
+        self.file = sys.stdout
+
+        try:
+            cmd = check_output('git var GIT_PAGER', shell=True).strip()
+        except CalledProcessError:
+            return None
+        self.proc = Popen(cmd, stdin=PIPE)
+        self.file = self.proc.stdin
+
+    def write(self, text):
+        """ Write text. """
+        try:
+            self.file.write(text)
+        except:
+            self.file = sys.stdout
+            self.file.write(text)
+
+    def close(self):
+        """ Flush, send EOF and wait. """
+        if self.proc:
+            self.file.close()
+            try:
+                self.proc.wait()
+            except KeyboardInterrupt:
+                self.proc.kill()
+                sys.exit(1)
+
 def clean_args(args, exclude_keys=[], exclude_values=[]):
     """ Remove unwanted keys and/or values from args. """
     d = {}
@@ -254,20 +285,11 @@ def list(args):
     issues = request('get', url, params=filters, auth=args.user)
     if issues:
         print("Listing %d issues with filters:" % len(issues), filters)
-        pager = Popen(GIT_PAGER, stdin=PIPE)
+        pager = Pager()
         for issue in issues:
-            try:
-                pager.stdin.write('%s %s\n' % (issue['number'], issue['title']))
-            except IOError as e:
-                if e.rrno == errno.EPIPE:
-                    # Stop looping on "Invalid pipe"
-                    break
-                else:
-                    # Raise any other error
-                    raise
+            pager.write('%s %s\n' % (issue['number'], issue['title']))
         # Flush and send EOF to pipe and wait for pager to terminate
-        pager.stdin.close()
-        pager.wait()
+        pager.close()
     else:
         print('This repo has no issues matching filters:', filters)
 
