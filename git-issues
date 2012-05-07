@@ -9,6 +9,7 @@ import getpass
 import errno
 import requests
 import json
+import textwrap
 from tempfile import mkstemp
 from urlparse import urlparse, urljoin
 from subprocess import check_call, Popen, PIPE, CalledProcessError
@@ -178,6 +179,17 @@ def get_message(args, template, use_keys=[]):
         sys.exit("Action aborted! Message is empty.")
     return new
 
+
+def wrap_text(text, width, indent=0):
+    """ Wrap text to width. """
+    out = []
+    for part in text.splitlines():
+        out.append(textwrap.fill(part, width, drop_whitespace=False,
+            initial_indent=' '*indent, subsequent_indent=' '*indent,
+            break_long_words=False))
+    return '\n'.join(out)
+
+
 def getTerminalSize():
     """ returns terminal size as (lines, columns) """
     import os, struct
@@ -227,7 +239,7 @@ class Pager():
         self.proc = Popen(cmd, stdin=PIPE)
         self.file = self.proc.stdin
 
-    def write(self, text, nl=True):
+    def write(self, text='', nl=True):
         """ Write text. """
         try:
             self.file.write(text)
@@ -320,14 +332,17 @@ def list(args):
     filters = clean_args(args, exclude_keys=['func', 'user'])
     issues = request('get', url, params=filters, auth=args.user)
     if issues:
-        print("Listing %d issues with filters:" % len(issues), filters)
-        pager = Pager()
-        pager.write(' Num Title')
-        pager.write(' === ' + '='*(pager.width-6))
-        for issue in issues:
-            pager.write(' {0[number]:>3} {0[title]}'.format(issue))
-        # Flush and send EOF to pipe and wait for pager to terminate
-        pager.close()
+        #print("Listing %d issues with filters:" % len(issues), filters)
+        try:
+            pager = Pager()
+            pager.write()
+            pager.write(' Num Title')
+            pager.write(' === ' + '='*(pager.width-6))
+            for issue in issues:
+                pager.write(' {0[number]:>3} {0[title]}'.format(issue))
+            pager.write()
+        finally:
+            pager.close()
     else:
         print('This repo has no issues matching filters:', filters)
 
@@ -346,9 +361,21 @@ def new(args):
 def show(args):
     """ Run show command """
     url = '/repos/:user/:repo/issues/%s' % args.issue
-    r = request('get', url, auth=args.user)
-    print("Show Issue %s" % args.issue)
-    print(r)
+    issue = request('get', url, auth=args.user)
+    #print(issue)
+    try:
+        pager = Pager()
+        pager.write()
+        pager.write(' Issue #{0[number]}: {0[title]}'.format(issue))
+        pager.write(' ' + '='*(pager.width-2))
+        pager.write()
+        if issue['state'] == 'closed':
+            pager.write('   CLOSED by {0[closed_by]}.'.format(issue))
+            pager.write()
+        pager.write(wrap_text(issue['body'], pager.width-2, 1))
+        pager.write()
+    finally:
+        pager.close()
 
 
 def edit(args):
