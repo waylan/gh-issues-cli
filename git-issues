@@ -178,18 +178,52 @@ def get_message(args, template, use_keys=[]):
         sys.exit("Action aborted! Message is empty.")
     return new
 
+def getTerminalSize():
+    """ returns terminal size as (lines, columns) """
+    import os, struct
+    def ioctl_GWINSZ(fd):
+        import fcntl, termios
+        return struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
+    # try stdin, stdout, stderr
+    for fd in (0, 1, 2):
+        try:
+            return ioctl_GWINSZ(fd)
+        except:
+            pass
+    # try os.ctermid()
+    try:
+        fd = os.open(os.ctermid(), os.O_RDONLY)
+        try:
+            return ioctl_GWINSZ(fd)
+        finally:
+            os.close(fd)
+    except:
+        pass
+    # try `stty size`
+    try:
+        return tuple(int(x) for x in os.popen("stty size", "r").read().split())
+    except:
+        pass
+    # try environment variables
+    try:
+        return tuple(int(os.getenv(var)) for var in ("LINES", "COLUMNS"))
+    except:
+        pass
+    # i give up. return default.
+    return (25, 80)
+
 
 class Pager():
     """ Wrapper Pager for multiple writes. """
 
     def __init__(self):
-        self.proc = None
-        self.file = sys.stdout
-
+        self.height, self.width = getTerminalSize()
         try:
             cmd = check_output('git var GIT_PAGER', shell=True).strip()
         except CalledProcessError:
-            return None
+            self.proc = None
+            self.file = sys.stdout
+            return
         self.proc = Popen(cmd, stdin=PIPE)
         self.file = self.proc.stdin
 
@@ -286,8 +320,10 @@ def list(args):
     if issues:
         print("Listing %d issues with filters:" % len(issues), filters)
         pager = Pager()
+        pager.write(' Num Title\n')
+        pager.write(' === ' + '='*(pager.width-6) +'\n')
         for issue in issues:
-            pager.write('%s %s\n' % (issue['number'], issue['title']))
+            pager.write(' {0[number]:>3} {0[title]}\n'.format(issue))
         # Flush and send EOF to pipe and wait for pager to terminate
         pager.close()
     else:
