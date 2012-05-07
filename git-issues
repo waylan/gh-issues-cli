@@ -362,7 +362,9 @@ def show(args):
     """ Run show command """
     url = '/repos/:user/:repo/issues/%s' % args.issue
     issue = request('get', url, auth=args.user)
-    #print(issue)
+    events = []
+    if args.events:
+        events = request('get', urljoin(url, 'events'), auth=args.user)
     try:
         pager = Pager()
         pager.write()
@@ -391,6 +393,17 @@ def show(args):
         pager.write(wrap_text(issue['body'], pager.width-2, 1))
         pager.write()
         pager.write(' ' + '-'*(pager.width-2))
+        for event in events:
+            if event['event'] in ['closed', 'reopened']:
+                pager.write(' {0[actor][login]} {0[event]} this issue on'
+                            ' {0[created_at]}\n'.format(event))
+            if event['event'] in ['merged', 'referenced']:
+                pager.write(' {0[actor][login]} {0[event]} this issue at'
+                            ' {0[commit_id]}\n'.format(event))
+            if event['event'] == 'assigned':
+                pager.write(' This issue was assigned to {0[actor][login]}'
+                            ' on {0[created_at]}\n'.format(event))
+        if events: pager.write(' ' + '-'*(pager.width-2))
     finally:
         pager.close()
 
@@ -492,6 +505,8 @@ show_psr = subparsers.add_parser('show', parents=[user_psr],
                 help='Display an existing issue')
 show_psr.add_argument('issue', type=int,
                       help='Issue ID number')
+show_psr.add_argument('-e', '--events', action='store_false',
+                      help='Show list of events.')
 show_psr.set_defaults(func=show)
 
 # The "edit" command
