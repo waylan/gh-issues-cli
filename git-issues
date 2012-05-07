@@ -227,13 +227,15 @@ class Pager():
         self.proc = Popen(cmd, stdin=PIPE)
         self.file = self.proc.stdin
 
-    def write(self, text):
+    def write(self, text, nl=True):
         """ Write text. """
         try:
             self.file.write(text)
         except:
             self.file = sys.stdout
             self.file.write(text)
+        if nl:
+            self.file.write('\n')
 
     def close(self):
         """ Flush, send EOF and wait. """
@@ -320,10 +322,10 @@ def list(args):
     if issues:
         print("Listing %d issues with filters:" % len(issues), filters)
         pager = Pager()
-        pager.write(' Num Title\n')
-        pager.write(' === ' + '='*(pager.width-6) +'\n')
+        pager.write(' Num Title')
+        pager.write(' === ' + '='*(pager.width-6))
         for issue in issues:
-            pager.write(' {0[number]:>3} {0[title]}\n'.format(issue))
+            pager.write(' {0[number]:>3} {0[title]}'.format(issue))
         # Flush and send EOF to pipe and wait for pager to terminate
         pager.close()
     else:
