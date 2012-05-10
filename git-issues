@@ -190,6 +190,15 @@ def wrap_text(text, width, indent=0):
     return '\n'.join(out)
 
 
+def truncate(text, size):
+    """ Truncate text to size and append '...' if appropriate. """
+    return text if len(text) <= size else text[:size-3].rsplit(' ', 1)[0]+'...'
+
+def columns(percentages, width):
+    """ return list if widths for given percentages and total width. """
+    return [(width*percent/100)-1 for percent in percentages]
+
+
 def getTerminalSize():
     """ returns terminal size as (lines, columns) """
     import os, struct
@@ -333,19 +342,24 @@ def list(args):
     filters = clean_args(args, exclude_keys=['func', 'user'])
     issues = request('get', url, params=filters, auth=args.user)
     if issues:
-        #print("Listing %d issues with filters:" % len(issues), filters)
         try:
             pager = Pager()
+            cols = columns([6, 75, 19], pager.width-1)
+            row = ' {number:>{cols[0]}} {title:<{cols[1]}} {labels:<{cols[2]}}'
             pager.write()
-            pager.write(' Num Title')
-            pager.write(' === ' + '='*(pager.width-6))
+            pager.write(row.format(cols=cols, number='Num', title='Title', 
+                                   labels='Labels'))
+            pager.write(' ' + ' '.join(('='*cols[0], '='*cols[1], '='*cols[2])))
             for issue in issues:
-                pager.write(' {0[number]:>3} {0[title]}'.format(issue))
+                labels = ', '.join([x['name'] for x in issue['labels']])
+                pager.write(row.format(cols=cols, number=issue['number'],
+                                       title=truncate(issue['title'], cols[1]),
+                                       labels=truncate(labels, cols[2])))
             pager.write()
         finally:
             pager.close()
     else:
-        print('This repo has no issues matching filters:', filters)
+        print('This repo has no issues matching the given filters.')
 
 
 def new(args):
