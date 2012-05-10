@@ -119,12 +119,15 @@ def request(method, url, **kwargs):
     url = urljoin('https://api.github.com/',
                   url.replace(':user/:repo', GH_PROJECT))
     kwargs['auth'] = GHAuth(kwargs.get('auth', None))
-    res = requests.request(method, url, **kwargs)
-    if res.status_code not in [requests.codes.ok, requests.codes.created]:
-        print(res.request) #TODO only print this if verbose
-        sys.exit('Error: "%s" for url: "%s"' % \
-                 (json.loads(res.text)['message'], res.url))
-    return json.loads(res.text)
+    r = requests.request(method, url, **kwargs)
+    try:
+        r.raise_for_status()
+    except:
+        sys.exit('Error: "%s" returned for method "%s" on url: "%s"' % \
+                 (json.loads(r.text)['message'], method.upper(), r.url))
+    if r.status_code != 204: # 204 is "No Content"
+        return json.loads(r.text)
+    return True
 
 
 def run_editor(txt):
@@ -276,6 +279,13 @@ def clean_args(args, exclude_keys=[], exclude_values=[]):
             d[k] = v
     return d
 
+def write_comment(pager, comment):
+    """ Format comment and write to pager. """
+    pager.write()
+    pager.write(' {0[user][login]} commented [{0[id]}]:'.format(comment))
+    pager.write(' ' + '='*(pager.width-2))
+    pager.write(wrap_text(comment['body_text'], pager.width-2, 1))
+    pager.write()
 
 ##################################################
 # Message Templates
@@ -293,9 +303,9 @@ MILESTONE: %(milestone)s
 LABELS: %(labels)s"""
 
 comment_tmp ="""%(body)s
-# Please enter a comment for issue %(issue)s above. You may use
-# Markdown to format your text. Lines starting with a '#' will be
-# ignored. A blank description will abort creation of the comment."""
+# Please enter/edit a comment above. You may use Markdown to format your 
+# text. Lines starting with a '#' will be ignored. A blank description 
+# will abort creation of the comment."""
 
 
 ##################################################
@@ -439,19 +449,58 @@ def edit(args):
 
 def comment(args):
     if args.list:
-        print("List comments for issue:", args.list)
+        # List comments for an issue
+        url = '/repos/:user/:repo/issues/%s/comments' % args.list
+        comments = request('get', url, auth=args.user,
+                headers={'Accept' : 'application/vnd.github.text+json'})
+        if comments:
+            try:
+                pager = Pager()
+                for comment in comments:
+                    write_comment(pager, comment)
+            finally:
+                pager.close()
+        else:
+            sys.exit('No comments for issue #%s.' % args.list)
+
     elif args.show:
-        print("Show comment #", args.show)
+        # Show a comment by id.
+        url = '/repos/:user/:repo/issues/comments/%s' % args.show
+        comment = request('get', url, auth=args.user,
+                headers={'Accept' : 'application/vnd.github.text+json'})
+        try:
+            pager = Pager()
+            write_comment(pager, comment)
+        finally: pager.close()
+
     elif args.new:
-        if args.body is None:
-            get_message(args, comment_tmp, {'issue': args.new})
-        print("Create comment on issue %s:" %args.new, args.body)
+        # Create a comment
+        data = clean_args(args, exclude_keys=['func', 'user'])
+        if data['body'] is None:
+            data = get_message(data, comment_tmp, ['body'])
+        url = '/repos/:user/:repo/issues/%s/comments' % args.new
+        comment = request('post', url, data=json.dumps(data), auth=args.user)
+        print("Successfully created comment #%s on issue #%s." \
+                            % (comment['id'], args.new))
+
     elif args.edit:
-        if args.body is None:
-            args.body = get_message()
-        print("Edit comment #%s to:" %args.edit, args.body)
+        # Edit a comment
+        url = '/repos/:user/:repo/issues/comments/%s' % args.edit
+        data = clean_args(args, exclude_keys=['func', 'user'])
+        if data['body'] is None:
+            # Retrieve comment and display in editor
+            data = request('get', url, auth=args.user)
+            data = get_message(data, comment_tmp, ['body'])
+        # Submit new data
+        comment = request('patch', url, data=json.dumps(data), auth=args.user)
+        print("Successfully edited comment #%s on issue #%s." \
+                            % (comment['id'], args.new))
+
     elif args.delete:
-        print("Delete comment#", args.delete)
+        # Delete a comment
+        url = '/repos/:user/:repo/issues/comments/%s' % args.delete
+        r = request('delete', url, auth=args.user)
+        print("Successfully deleted comment #%s." % args.delete)
 
 
 ##################################################
