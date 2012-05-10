@@ -226,7 +226,7 @@ def getTerminalSize():
 
 
 class Pager():
-    """ Wrapper Pager for multiple writes. """
+    """ Wrap Pager for multiple writes. """
 
     def __init__(self):
         self.height, self.width = getTerminalSize()
@@ -279,6 +279,7 @@ issue_tmp ="""%(body)s
 # ignored. A blank description will abort the action. To edit other
 # attributes of an issue, edit the text after each colon below:
 TITLE: %(title)s
+ASSIGNEE: %(assignee)s
 MILESTONE: %(milestone)s
 LABELS: %(labels)s"""
 
@@ -505,7 +506,7 @@ show_psr = subparsers.add_parser('show', parents=[user_psr],
                 help='Display an existing issue')
 show_psr.add_argument('issue', type=int,
                       help='Issue ID number')
-show_psr.add_argument('-e', '--events', action='store_false',
+show_psr.add_argument('-e', '--events', action='store_true',
                       help='Show list of events.')
 show_psr.set_defaults(func=show)
 
