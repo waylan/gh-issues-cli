@@ -53,18 +53,32 @@ repo's issues.
 Assuming everything is configured properly, ``cd`` into our working tree and
 view a list of open issues::
 
-    $ cd myproject
-    $ git-issues list
-     5 Bug in foo
-     2 Typo in Docs
+   $ cd myproject
+   $ git-issues list
+
+    Num Title                                       Lables
+    === =========================================== ==========
+      5 Bug in foo                                  bug
+      2 Typo in Docs                                docs
 
 Suppose we want to view the new issue someone reported as issue #5 listed
 above::
 
-    $ git-issues show 5
-    #5 Bug in foo
+   $ git-issues show 5
+
+    Issue #5: Bug in foo
+    ==========================================================
+
+       State: OPEN
+        User: bob
+     Created: 2012-05-11T20:06:24Z
+    Comments: 0
+
+    ----------------------------------------------------------
 
     Whenever I pass "bar" to `foo()` it gives me an error.
+
+    ----------------------------------------------------------
 
 Obliviously, the original reporter did not provide enough information. Let's
 add a comment asking for clarification::
@@ -79,31 +93,56 @@ GitHub.
 
 Now, let's check to see if we have a response to our request for more info::
 
-    $ git-issues comments --list 5
-    #1 What error does it give you?
-    #2 It says "Bad Foo" when I do `foo("bar")`.
+   $ git-issues comments --list 5
+
+    waylan commented [12345678]:
+    ===========================================================
+    @bob, what error does it give you?
+
+    bob commented [98765432]:
+    ===========================================================
+    It says "Bad Foo" when I do `foo("bar")`.
 
 After pushing our fix, which included the text "fixed #5" in your commit
 message, GitHub should have closed the issue automaticaly for us. Lets check::
 
-    $ git-issues list
-     2 Typo in Docs
+   $ git-issues list
+
+    Num Title                                       Lables
+    === =========================================== ==========
+      2 Typo in Docs                                docs
 
 Sure enough, Issue #5 is no longer listed as an open issue. Lets make sure and
 list all closed issues::
 
-    $ git-issues list --state closed
-     5 Bug in foo
-     4 Some weirdness
-     3 Silly typo
-     1 A bad issue description
+   $ git-issues list --state closed
+
+
+    Num Title                                       Lables
+    === =========================================== ==========
+      5 Bug in foo                                  bug
+      4 Some weirdness                              invalid
+      3 Silly typo                                  bug
+      1 A bad issue description which is long ...   wontfix
 
 Excellant! Now let's look at the alledged typo in the docs (issue #2)::
 
-    $ git-issues show 2
-    #2 Typo in Docs
+   $ git-issues show 2
 
-    What is this "foo"? My spell checker keeps tripping up on it.
+    Issue #2: Typo in Docs
+    ==========================================================
+
+       State: OPEN
+        User: Sue
+     Created: 2012-05-10T11:34:08Z
+    Comments: 0
+
+    ----------------------------------------------------------
+
+    What is this "foo"? My spell checker keeps tripping up on
+    it.
+
+    ----------------------------------------------------------
 
 Hmm, err, well, that's not a bug. Guess we need to educate our users::
 
