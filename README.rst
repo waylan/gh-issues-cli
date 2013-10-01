@@ -2,7 +2,7 @@ GitHub Issues Command Line Interface
 ====================================
 
 Would you like to avoid using a browser when managing "Issues" for your
-projects hosted on GutHub? Do you prefer using emacs or vim as your text editor
+projects hosted on GitHub? Do you prefer using emacs or vim as your text editor
 of choice? Do you prefer your entire workflow to remain on the command line
 when developing? Then the GitHub Issues Command Line Interface may be for you.
 
